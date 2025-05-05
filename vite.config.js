@@ -7,5 +7,7 @@ export default defineConfig({
   plugins: [react(),
     tailwindcss()
   ],
-  
+  optimizeDeps: {
+    include: ['react-slick', 'slick-carousel']
+  }
 })
