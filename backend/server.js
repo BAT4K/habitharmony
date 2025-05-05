@@ -5,6 +5,16 @@ require('dotenv').config();
 
 const app = express();
 
+const allowedOrigins = [
+    'http://localhost:5173', // Local development
+    'https://habitharmony.vercel.app/' // Replace with your Vercel frontend URL
+  ];
+  
+  app.use(cors({
+    origin: allowedOrigins,
+    credentials: true
+  }));
+
 // Middleware
 app.use(cors({
     origin: 'http://localhost:5173', // Update this with your frontend URL
