@@ -5,24 +5,27 @@ require('dotenv').config();
 
 const app = express();
 
+// Correct CORS setup
 const allowedOrigins = [
-    'http://localhost:5173', // Local development
-    'https://habitharmony.vercel.app/' // Replace with your Vercel frontend URL
-  ];
-  
-  app.use(cors({
-    origin: allowedOrigins,
-    credentials: true
-  }));
+    'http://localhost:5173', // Local dev
+    'https://habitharmony.vercel.app' // Deployed frontend
+];
 
-// Middleware
 app.use(cors({
-    origin: 'http://localhost:5173', // Update this with your frontend URL
+    origin: function (origin, callback) {
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
     credentials: true
 }));
+
+
 app.use(express.json());
 
-// Connect to MongoDB
+// MongoDB connection
 mongoose.connect(process.env.MONGODB_URI)
     .then(() => console.log('Connected to MongoDB'))
     .catch(err => console.error('MongoDB connection error:', err));
