@@ -25,11 +25,6 @@ export default function ImageSlider() {
     speed: 500,
     slidesToShow: 1,
     slidesToScroll: 1,
-    afterChange: (current) => {
-      if (current === 2) {
-        navigate("/auth");
-      }
-    },
     dotsClass: "slick-dots custom-dots", // Custom class for dots
   };
 
