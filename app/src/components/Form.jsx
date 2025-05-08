@@ -38,6 +38,8 @@ const Form = () => {
       
       // Simulate loading for better UX
       setTimeout(() => {
+        // After real login API call, store user._id in localStorage:
+        // localStorage.setItem('habitharmony_user_id', response.data.user._id);
         navigate('/homescreen');
       }, 800);
     }

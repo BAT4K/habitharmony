@@ -1,11 +1,15 @@
 import Calendar from "../components/Calendar";
 import React from "react";
 import ActivitySection from "../components/ActivitySection";
-import { Search, Bot } from "lucide-react";
+import { Search, Bot, Award } from "lucide-react";
 import reminder from "../assets/reminder.png";
 import HabitSection from "../components/HabitSection";
 
 const HomeScreen = () => {
+  const isPremium = typeof window !== 'undefined' && localStorage.getItem('habitharmony_premium') === 'true';
+  const greeting = new Date().getHours() < 12 ? "Good Morning" : new Date().getHours() < 18 ? "Good Afternoon" : "Good Evening";
+  const userName = "User"; // Replace with actual user name
+
   return (
     <div className="min-h-screen font-display bg-[#F8F3F3] pt-12 bg-16">
       <div className="flex justify-between px-3">
@@ -22,6 +26,20 @@ const HomeScreen = () => {
       <div className="flex justify-center px-3">
         <img src={reminder} alt="reminder" />
       </div>
+      <div className="flex items-center gap-2 px-4 mt-4">
+        <span className="text-[#F75836]">{greeting === "Good Morning" ? "☀️" : greeting === "Good Afternoon" ? "🌤️" : "🌙"}</span>
+        <h1 className="font-bold text-lg flex items-center gap-2">
+          {greeting}, {userName}!
+          {isPremium && (
+            <span className="inline-flex items-center gap-1 text-green-600 font-bold ml-2">
+              <Award size={16} /> Premium
+            </span>
+          )}
+        </h1>
+      </div>
+      <p className="text-gray-500 text-sm mt-1 px-4">{
+        new Date().toLocaleDateString(undefined, { weekday: 'short', month: 'long', day: 'numeric' })
+      }</p>
       <Calendar />
       <div className="flex justify-between p-4 mt-2 items-center">
         <p className="font-bold text-xl">For you</p>

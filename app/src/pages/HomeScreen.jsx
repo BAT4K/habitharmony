@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { 
   Sun, Plus, ChevronRight, Bell, Trophy, 
-  Zap, ArrowRight, Calendar as CalendarIcon, User, X, Pencil
+  Zap, ArrowRight, Calendar as CalendarIcon, User, X, Pencil, Moon, LogOut, Edit, Award, Settings
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import maradImg from '../assets/marad.png';
 import auratImg from '../assets/aurat.png';
+import { useNavigate } from 'react-router-dom';
+import { UPGRADE_FEATURES, UPGRADE_PRICES, getRemainingMessages, openRazorpay } from '../utils/upgradeInfo';
 
 // Mock data for the demo
 const userPoints = 1420;
@@ -222,6 +224,10 @@ const HomeScreen = () => {
   const [avatar, setAvatar] = useState(() => {
     return localStorage.getItem('habitharmony_avatar') || maradImg;
   });
+  const navigate = useNavigate();
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const isPremium = localStorage.getItem('habitharmony_premium') === 'true';
+  const [currentTheme, setCurrentTheme] = useState(() => localStorage.getItem('habitharmony_theme') || 'light');
 
   // Blur navbar when edit modal is open
   useEffect(() => {
@@ -232,6 +238,24 @@ const HomeScreen = () => {
     }
     return () => document.body.classList.remove('celebration-blur');
   }, [showCelebration, showEditHabits]);
+
+  // Click-away logic for menu
+  useEffect(() => {
+    function handleClick(e) {
+      if (!e.target.closest('.profile-menu-trigger') && !e.target.closest('.profile-menu-dropdown')) {
+        setShowProfileMenu(false);
+      }
+    }
+    if (showProfileMenu) document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [showProfileMenu]);
+
+  const handleThemeToggle = () => {
+    const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+    setCurrentTheme(newTheme);
+    localStorage.setItem('habitharmony_theme', newTheme);
+    document.documentElement.classList.toggle('dark', newTheme === 'dark');
+  };
 
   // Function to open day details modal
   function openDayDetails(dateStr) {
@@ -576,7 +600,9 @@ const HomeScreen = () => {
               <span className="text-[#F75836]">{greeting === "Good Morning" ? "☀️" : greeting === "Good Afternoon" ? "🌤️" : "🌙"}</span>
               <h1 className="font-bold text-lg">{greeting}, {userName}!</h1>
             </div>
-            <p className="text-gray-500 text-sm mt-1">Wed, May 7</p>
+            <p className="text-gray-500 text-sm mt-1">{
+              new Date().toLocaleDateString(undefined, { weekday: 'short', month: 'long', day: 'numeric' })
+            }</p>
           </div>
           
           <div className="flex items-center gap-3">
@@ -589,13 +615,44 @@ const HomeScreen = () => {
                 {userStreak}d
               </span>
             </div>
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="relative size-10 rounded-full cursor-pointer border-2 border-[#F75836] overflow-hidden"
-            >
-              <img src={avatar} alt="Profile" className="w-full h-full object-cover" />
-            </motion.div>
+            <div className="relative">
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="profile-menu-trigger size-10 rounded-full cursor-pointer border-2 border-[#F75836] overflow-hidden"
+                onClick={() => setShowProfileMenu(v => !v)}
+              >
+                <img src={avatar} alt="Profile" className="w-full h-full object-cover" />
+                {isPremium && (
+                  <span className="absolute -top-1 -right-1 bg-green-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold shadow">Premium</span>
+                )}
+              </motion.div>
+              <AnimatePresence>
+                {showProfileMenu && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="profile-menu-dropdown absolute right-0 mt-2 w-60 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 py-2"
+                  >
+                    <MenuButton icon={<User size={18} className="mr-2 text-[#F75836]" />} label="View Profile" onClick={() => { setShowProfileMenu(false); navigate('/profile'); }} />
+                    <MenuButton icon={<Edit size={18} className="mr-2 text-blue-500" />} label="Edit Profile" onClick={() => { setShowProfileMenu(false); localStorage.setItem('habitharmony_open_edit_profile', '1'); navigate('/profile'); }} />
+                    <MenuButton
+                      icon={currentTheme === 'dark' ? <Moon size={18} className="mr-2 text-indigo-500" /> : <Sun size={18} className="mr-2 text-yellow-500" />}
+                      label={<span className="flex items-center">Theme: {currentTheme === 'dark' ? 'Dark' : 'Light'} {currentTheme === 'dark' ? <span className="ml-1">✔</span> : null}</span>}
+                      onClick={() => { handleThemeToggle(); }}
+                    />
+                    {isPremium ? (
+                      <MenuButton icon={<Award size={18} className="mr-2 text-green-600" />} label={<span className="flex items-center">Manage Subscription <span className="ml-2 bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full">Premium</span></span>} onClick={() => { setShowProfileMenu(false); navigate('/profile?manage-sub=1'); }} />
+                    ) : (
+                      <MenuButton icon={<Trophy size={18} className="mr-2 text-orange-500" />} label={<span className="font-semibold text-orange-600">Upgrade to Premium</span>} onClick={() => { setShowProfileMenu(false); openRazorpay({ plan: 'monthly' }); }} />
+                    )}
+                    <div className="my-2 border-t border-gray-100" />
+                    <MenuButton icon={<LogOut size={18} className="mr-2 text-red-500" />} label={<span className="text-red-500 font-semibold">Log Out</span>} onClick={() => { setShowProfileMenu(false); localStorage.clear(); navigate('/login'); }} />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
         </div>
       </div>
@@ -963,5 +1020,19 @@ const HomeScreen = () => {
     </div>
   );
 };
+
+function MenuButton({ icon, label, onClick }) {
+  return (
+    <button
+      className="w-full flex items-center px-4 py-3 rounded-xl transition-all duration-150 active:bg-orange-100 focus:outline-none focus:ring-2 focus:ring-[#F75836] text-base font-medium group"
+      onClick={onClick}
+      tabIndex={0}
+      type="button"
+    >
+      {icon}
+      <span className="flex-1 text-left transition-colors">{label}</span>
+    </button>
+  );
+}
 
 export default HomeScreen;

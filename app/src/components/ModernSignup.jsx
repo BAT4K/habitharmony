@@ -237,6 +237,8 @@ const ModernSignup = () => {
       console.log('Form submitted:', formData);
       // Store user data or token if needed
       // localStorage.setItem('token', 'sample-token');
+      // When using real API, store user._id in localStorage:
+      // localStorage.setItem('habitharmony_user_id', response.data.user._id);
       // Navigate to homescreen
       navigate('/homescreen');
     }, 1000);

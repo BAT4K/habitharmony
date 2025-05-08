@@ -9,20 +9,277 @@ import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import maradImg from '../assets/marad.png';
 
-// Hugging Face API configuration
-const HF_API_URL = "https://api-inference.huggingface.co/models/HuggingFaceH4/zephyr-7b-beta";
-const HF_API_KEY = import.meta.env.VITE_HUGGINGFACE_API_KEY;
+// API configuration
+const OLLAMA_API_URL = "http://localhost:11434/api/chat";
+
+// Rate limiting configuration
+const RATE_LIMIT = {
+  maxRequests: 60, // Gemini's free tier limit per minute
+  timeWindow: 60000, // 1 minute in milliseconds
+  requests: []
+};
 
 // Fallback responses for when API is not available
 const fallbackResponses = {
   greeting: "Hello! I'm your AI coach. How can I help you today?",
-  error: "I'm having trouble connecting right now. Here are some tips:\n\n1. Start with small, achievable goals\n2. Track your progress daily\n3. Celebrate small wins\n4. Stay consistent\n\nWould you like me to elaborate on any of these points?",
-  default: "I understand you're working on building better habits. Remember that consistency is key, and it's okay to have setbacks. What specific area would you like to focus on?"
+  error: "I'm having trouble connecting right now. Here are some tips:\n\n" +
+         "1. Start with small, achievable goals\n" +
+         "2. Track your progress daily\n" +
+         "3. Celebrate small wins\n" +
+         "4. Stay consistent\n\n" +
+         "You can also try:\n" +
+         "- Using the habit tracking tools in the app\n" +
+         "- Setting up reminders for your habits\n" +
+         "- Breaking down your goals into smaller steps\n\n" +
+         "Would you like me to elaborate on any of these points?",
+  default: "I understand you're working on building better habits. Here are some key principles to remember:\n\n" +
+           "1. Start small and build up gradually\n" +
+           "2. Focus on consistency over perfection\n" +
+           "3. Track your progress to stay motivated\n" +
+           "4. Celebrate your wins, no matter how small\n\n" +
+           "What specific area would you like to focus on today?"
+};
+
+// Add these functions after the fallbackResponses object
+const getDayBasedGreeting = () => {
+  const day = new Date().getDay();
+  const dayGreetings = {
+    0: "Happy Sunday", // Sunday
+    1: "Happy Monday",
+    2: "Happy Tuesday",
+    3: "Happy Wednesday",
+    4: "Happy Thursday",
+    5: "Happy Friday",
+    6: "Happy Saturday"
+  };
+  return dayGreetings[day];
+};
+
+const getSeason = () => {
+  const month = new Date().getMonth() + 1;
+  const day = new Date().getDate();
+  // Northern Hemisphere (adjust for your region if needed)
+  if ((month === 12 && day >= 21) || (month <= 2) || (month === 3 && day < 20)) return "winter";
+  if ((month === 3 && day >= 20) || (month <= 5) || (month === 6 && day < 21)) return "spring";
+  if ((month === 6 && day >= 21) || (month <= 8) || (month === 9 && day < 22)) return "summer";
+  if ((month === 9 && day >= 22) || (month <= 11) || (month === 12 && day < 21)) return "fall";
+  return "";
+};
+
+const getUserPreferredHabit = () => {
+  // Try to get a preferred habit from localStorage or fallback to null
+  try {
+    const habit = localStorage.getItem('habitharmony_preferred_habit');
+    return habit ? habit : null;
+  } catch {
+    return null;
+  }
+};
+
+const getSpecialOccasion = () => {
+  const today = new Date();
+  const month = today.getMonth();
+  const date = today.getDate();
+  // Expanded special occasions
+  const occasions = {
+    "1-1": "Happy New Year",
+    "2-14": "Happy Valentine's Day",
+    "3-8": "Happy International Women's Day",
+    "4-22": "Happy Earth Day",
+    "5-1": "Happy Labor Day",
+    "6-21": "Happy Summer Solstice",
+    "10-31": "Happy Halloween",
+    "11-23": "Happy Thanksgiving", // US Thanksgiving (4th Thursday of November, approx)
+    "12-25": "Merry Christmas",
+    "12-31": "Happy New Year's Eve",
+    "2-10": "Happy Chinese New Year", // 2024 date, update as needed
+    "4-10": "Happy Eid al-Fitr", // 2024 date, update as needed
+    "10-31": "Happy Diwali", // 2024 date, update as needed
+    "12-7": "Happy Hanukkah", // 2024 date, update as needed
+  };
+  const occasionKey = `${month + 1}-${date}`;
+  return occasions[occasionKey] || null;
+};
+
+const getPersonalizedGreeting = (name) => {
+  const hour = new Date().getHours();
+  const specialOccasion = getSpecialOccasion();
+  const dayGreeting = getDayBasedGreeting();
+  const season = getSeason();
+  const preferredHabit = getUserPreferredHabit();
+  let timeBasedGreeting;
+  if (hour >= 5 && hour < 12) {
+    timeBasedGreeting = "Good morning";
+  } else if (hour >= 12 && hour < 17) {
+    timeBasedGreeting = "Good afternoon";
+  } else if (hour >= 17 && hour < 22) {
+    timeBasedGreeting = "Good evening";
+  } else {
+    timeBasedGreeting = "Hello";
+  }
+
+  // Seasonal greetings
+  const seasonalGreetings = {
+    winter: [
+      `Stay cozy this winter${name ? ", " + name : ''}! ❄️ I'm Coach Nova, here to help you build warm habits.`,
+      `Winter wellness check-in${name ? ", " + name : ''}! ⛄ How can I help you stay motivated?`,
+      `It's chilly outside! Let's warm up your habit streak,${name ? ' ' + name : ''}! 🔥`
+    ],
+    spring: [
+      `Happy spring${name ? ", " + name : ''}! 🌸 I'm Coach Nova, ready to help you grow new habits.`,
+      `Spring into action${name ? ", " + name : ''}! 🌱 What would you like to work on today?`,
+      `Fresh starts for spring! Let's plant some good habits,${name ? ' ' + name : ''}! 🌷`
+    ],
+    summer: [
+      `Happy summer${name ? ", " + name : ''}! ☀️ I'm Coach Nova, here to help you shine.`,
+      `Summer vibes${name ? ", " + name : ''}! 😎 Ready to build some sunny new habits?`,
+      `Let's make this summer productive,${name ? ' ' + name : ''}! 🏖️`
+    ],
+    fall: [
+      `Happy fall${name ? ", " + name : ''}! 🍂 I'm Coach Nova, here to help you harvest good habits.`,
+      `Autumn check-in${name ? ", " + name : ''}! 🎃 What would you like to focus on?`,
+      `Let's turn over a new leaf this fall,${name ? ' ' + name : ''}! 🍁`
+    ]
+  };
+
+  // More greeting variations for each time
+  const morningGreetings = [
+    `${timeBasedGreeting}${name ? ` ${name}` : ''}! 🌅 I'm Coach Nova, ready to help you start your day right. What habits would you like to focus on today?`,
+    `${timeBasedGreeting}${name ? ` ${name}` : ''}! ☀️ I'm Coach Nova, excited to help you build momentum for your day. How can I assist you?`,
+    `${timeBasedGreeting}${name ? ` ${name}` : ''}! 🌞 I'm Coach Nova, here to help you make the most of your morning. What's on your mind?`,
+    `${timeBasedGreeting}${name ? ` ${name}` : ''}! 🥣 Did you have breakfast? Let's fuel your day with good habits!`,
+    `${timeBasedGreeting}${name ? ` ${name}` : ''}! 🧘‍♂️ How about a quick meditation to start your day?`,
+    preferredHabit ? `${timeBasedGreeting}${name ? ` ${name}` : ''}! Let's make time for your favorite habit: ${preferredHabit}.` : null
+  ].filter(Boolean);
+
+  const afternoonGreetings = [
+    `${timeBasedGreeting}${name ? ` ${name}` : ''}! 🌤️ I'm Coach Nova, here to help you maintain your momentum. How can I support you?`,
+    `${timeBasedGreeting}${name ? ` ${name}` : ''}! ⭐ I'm Coach Nova, ready to help you stay on track. What would you like to work on?`,
+    `${timeBasedGreeting}${name ? ` ${name}` : ''}! 💫 I'm Coach Nova, here to help you make the most of your day. How can I assist you?`,
+    `${timeBasedGreeting}${name ? ` ${name}` : ''}! 🍵 Time for a quick break? Let's check in on your habits.`,
+    preferredHabit ? `${timeBasedGreeting}${name ? ` ${name}` : ''}! How's your progress with ${preferredHabit}?` : null
+  ].filter(Boolean);
+
+  const eveningGreetings = [
+    `${timeBasedGreeting}${name ? ` ${name}` : ''}! 🌙 I'm Coach Nova, here to help you wind down and reflect. How was your day?`,
+    `${timeBasedGreeting}${name ? ` ${name}` : ''}! 🌠 I'm Coach Nova, ready to help you plan for tomorrow. What's on your mind?`,
+    `${timeBasedGreeting}${name ? ` ${name}` : ''}! 🌛 I'm Coach Nova, here to help you end your day on a positive note. How can I assist you?`,
+    `${timeBasedGreeting}${name ? ` ${name}` : ''}! 📖 How about a little journaling before bed?`,
+    preferredHabit ? `${timeBasedGreeting}${name ? ` ${name}` : ''}! Don't forget your ${preferredHabit} before the day ends.` : null
+  ].filter(Boolean);
+
+  const nightGreetings = [
+    `${timeBasedGreeting}${name ? ` ${name}` : ''}! 🌌 I'm Coach Nova, here to help you prepare for tomorrow. What would you like to focus on?`,
+    `${timeBasedGreeting}${name ? ` ${name}` : ''}! 🌑 I'm Coach Nova, ready to help you plan for a better tomorrow. How can I assist you?`,
+    `${timeBasedGreeting}${name ? ` ${name}` : ''}! 🌘 I'm Coach Nova, here to help you set up for success. What's on your mind?`,
+    `${timeBasedGreeting}${name ? ` ${name}` : ''}! 😴 Time to wind down. Any last habits for today?`,
+    preferredHabit ? `${timeBasedGreeting}${name ? ` ${name}` : ''}! A little ${preferredHabit} before bed can be a great way to end the day.` : null
+  ].filter(Boolean);
+
+  // General greetings (fallback)
+  const generalGreetings = [
+    `${timeBasedGreeting}${name ? ` ${name}` : ''}! 👋 I'm Coach Nova, your personal habit assistant. How can I help you today?`,
+    `${timeBasedGreeting}${name ? ` ${name}` : ''}! 🌟 I'm Coach Nova, ready to help you build better habits. What would you like to work on?`,
+    `${timeBasedGreeting}${name ? ` ${name}` : ''}! 💪 I'm Coach Nova, here to support your wellness journey. How can I assist you today?`,
+    `${timeBasedGreeting}${name ? ` ${name}` : ''}! ✨ I'm Coach Nova, your habit-building companion. What's on your mind?`,
+    `${timeBasedGreeting}${name ? ` ${name}` : ''}! 🌱 I'm Coach Nova, excited to help you grow your habits. How can I support you today?`
+  ];
+
+  // Select appropriate greeting array based on time
+  let greetingArray;
+  if (hour >= 5 && hour < 12) {
+    greetingArray = morningGreetings;
+  } else if (hour >= 12 && hour < 17) {
+    greetingArray = afternoonGreetings;
+  } else if (hour >= 17 && hour < 22) {
+    greetingArray = eveningGreetings;
+  } else {
+    greetingArray = nightGreetings;
+  }
+
+  // Special occasion greeting
+  if (specialOccasion) {
+    return `${specialOccasion}${name ? ` ${name}` : ''}! 🎉 I'm Coach Nova, here to help you celebrate and maintain your habits. How can I assist you today?`;
+  }
+
+  // Weekend greeting
+  if (new Date().getDay() === 0 || new Date().getDay() === 6) {
+    return `${dayGreeting}${name ? ` ${name}` : ''}! 🌈 I'm Coach Nova, here to help you make the most of your weekend. What would you like to focus on?`;
+  }
+
+  // Seasonal greeting
+  if (season && seasonalGreetings[season]) {
+    return seasonalGreetings[season][Math.floor(Math.random() * seasonalGreetings[season].length)];
+  }
+
+  // Return random greeting from appropriate array
+  return greetingArray[Math.floor(Math.random() * greetingArray.length)];
+};
+
+const getAdvancedPersonalizedGreeting = (name) => {
+  const hour = new Date().getHours();
+  const specialOccasion = getSpecialOccasion();
+  const dayGreeting = getDayBasedGreeting();
+  const season = getSeason();
+  const preferredHabit = getUserPreferredHabit();
+
+  // Advanced personalization from localStorage
+  let lastCompletedHabit = null;
+  let streakCount = null;
+  let lastMood = null;
+  let lastVisit = null;
+  try {
+    lastCompletedHabit = localStorage.getItem('habitharmony_last_completed_habit');
+    streakCount = parseInt(localStorage.getItem('habitharmony_streak_count'), 10);
+    lastMood = localStorage.getItem('habitharmony_last_mood');
+    lastVisit = localStorage.getItem('habitharmony_last_visit');
+  } catch {}
+
+  // Calculate time since last visit (in days)
+  let daysSinceLastVisit = null;
+  if (lastVisit) {
+    const last = new Date(parseInt(lastVisit, 10));
+    const now = new Date();
+    daysSinceLastVisit = Math.floor((now - last) / (1000 * 60 * 60 * 24));
+  }
+
+  // 1. Welcome back if it's been a while
+  if (daysSinceLastVisit !== null && daysSinceLastVisit > 2) {
+    return `Welcome back${name ? ', ' + name : ''}! 👋 It's been ${daysSinceLastVisit} days. Ready to get back on track?`;
+  }
+
+  // 2. Celebrate streaks
+  if (streakCount && streakCount > 1) {
+    return `Amazing job${name ? ', ' + name : ''}! 🌟 You're on a ${streakCount}-day streak${preferredHabit ? ' with ' + preferredHabit : ''}! Keep it going!`;
+  }
+
+  // 3. Reference last completed habit
+  if (lastCompletedHabit) {
+    return `Congrats on completing ${lastCompletedHabit}${name ? ', ' + name : ''}! 🎉 Want to keep the momentum going today?`;
+  }
+
+  // 4. Mood-aware greeting
+  if (lastMood) {
+    if (lastMood === 'Tired') {
+      return `I noticed you felt a bit tired recently${name ? ', ' + name : ''}. 😴 Want to try a gentle habit today?`;
+    } else if (lastMood === 'Happy') {
+      return `You were feeling happy last time${name ? ', ' + name : ''}! 😊 Let's channel that energy into your habits!`;
+    } else if (lastMood === 'Sad') {
+      return `I saw you were feeling down last time${name ? ', ' + name : ''}. 💙 Want to try something uplifting today?`;
+    } else if (lastMood === 'Frustrated') {
+      return `Last time you felt frustrated${name ? ', ' + name : ''}. 😤 Let's break things down and make progress together!`;
+    } else if (lastMood === 'Neutral') {
+      return `Welcome back${name ? ', ' + name : ''}! Let's make today a good one!`;
+    }
+  }
+
+  // Fallback to previous personalized greeting system
+  return getPersonalizedGreeting(name);
 };
 
 // Check if API key is configured
-if (!HF_API_KEY) {
-  console.error('Hugging Face API key is not configured. Please add VITE_HUGGINGFACE_API_KEY to your .env file');
+if (!OLLAMA_API_URL) {
+  console.error('Ollama API URL is not configured. Please add OLLAMA_API_URL to your .env file');
 }
 
 // Function to clean AI response and remove echoed user input
@@ -44,6 +301,51 @@ function cleanAIResponse(userInput, aiOutput) {
   return aiOutput.trim();
 }
 
+// Add blinking cursor CSS
+if (typeof document !== 'undefined' && !document.getElementById('blinking-cursor-style')) {
+  const style = document.createElement('style');
+  style.id = 'blinking-cursor-style';
+  style.innerHTML = `
+    .blinking-cursor {
+      display: inline-block;
+      width: 1ch;
+      animation: blink 1s steps(1) infinite;
+      color: #F75836;
+      font-weight: bold;
+    }
+    @keyframes blink {
+      0%, 50% { opacity: 1; }
+      51%, 100% { opacity: 0; }
+    }
+    .ai-streaming-message {
+      font-family: inherit;
+      font-size: 1rem;
+      background: #fffbe8;
+      border-radius: 1rem;
+      padding: 1rem;
+      margin: 1rem 0;
+      border: 1px solid #ffe0b2;
+      min-height: 2.5rem;
+      white-space: pre-line;
+      word-break: break-word;
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+// Dynamically load Razorpay script
+function loadRazorpayScript() {
+  return new Promise((resolve) => {
+    if (document.getElementById('razorpay-script')) return resolve(true);
+    const script = document.createElement('script');
+    script.id = 'razorpay-script';
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+}
+
 // Main AI Coach Component
 export default function AICoach({ onBack }) {
   const [messages, setMessages] = useState([]);
@@ -60,6 +362,13 @@ export default function AICoach({ onBack }) {
   const [userName, setUserName] = useState('');
   const [selectedDay, setSelectedDay] = useState(null);
   const [canContinue, setCanContinue] = useState(false);
+  const [streamingText, setStreamingText] = useState("");
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [upgradeStep, setUpgradeStep] = useState('plans');
+  const [selectedPlan, setSelectedPlan] = useState(null);
+  const [premium, setPremium] = useState(() => localStorage.getItem('habitharmony_premium') === 'true');
+  const [upgradeError, setUpgradeError] = useState('');
+  const [showManageSubscription, setShowManageSubscription] = useState(false);
   
   // Mock data - saved tips
   const savedTips = [
@@ -103,135 +412,177 @@ export default function AICoach({ onBack }) {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  // Function to get AI response from Hugging Face
+  // Function to get AI response from Ollama
   const getAIResponse = async (text) => {
     try {
-      // First, check if the API key is configured
-      if (!HF_API_KEY) {
-        console.warn('Using fallback response: API key not configured');
-        return fallbackResponses.default;
-      }
+      const habitData = getUserHabitData();
+      const systemPrompt = `
+You are Coach Nova, a helpful and friendly habit and wellness assistant.
+Here is the user's habit data:
+- Current streak: ${habitData.streak}
+- Best streak: ${habitData.bestStreak}
+- Longest streak habit: ${habitData.longestStreakHabit || 'N/A'}
+- Points: ${habitData.points}
+- Most consistent habit: ${habitData.mostConsistentHabit || 'N/A'}
+- Habits: ${habitData.habits.map(h => h.name).join(', ') || 'None'}
+- Habits completed this week: ${Object.entries(habitData.completedThisWeek).map(([k,v]) => `${k} (${v})`).join(', ') || 'None'}
+- Last completed habit: ${habitData.lastCompletedHabit || 'N/A'}
+- Total completions (all time): ${habitData.totalCompletionsAllTime}
+- Average completions per week: ${habitData.avgCompletionsPerWeek}
+- Missed habits this week: ${Object.keys(habitData.missedThisWeek).join(', ') || 'None'}
+- Best month: ${habitData.bestMonth || 'N/A'} (${habitData.bestMonthCount} completions)
+- Most improved habit (last 30 days): ${habitData.mostImprovedHabit || 'N/A'} (+${habitData.maxStreakIncrease} streak)
+- Recent completions: ${Object.keys(habitData.calendarHistory).slice(-7).join(', ')}
 
-      const systemPrompt = "You are Coach Nova, a helpful and friendly habit and wellness assistant. Answer user questions clearly and conversationally. Do not repeat the user's question. If you don't know, say so politely.\n";
-      const history = messages
-        .filter(m => m.sender === 'user' || m.sender === 'ai')
-        .map(m => `${m.sender === 'user' ? 'User' : 'Assistant'}: ${m.text}`)
-        .join('\n');
-      const prompt = systemPrompt + history + `\nUser: ${text}\nAssistant:`;
+Answer user questions clearly and conversationally, using this data when relevant.
+`;
 
-      const response = await fetch(HF_API_URL, {
+      const response = await fetch(OLLAMA_API_URL, {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${HF_API_KEY}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          inputs: text,
-          parameters: {
-            max_new_tokens: 350,
-            temperature: 0.7,
-            top_p: 0.95,
-            repetition_penalty: 1.1
-          }
+          model: "phi3:mini",
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: text }
+          ],
+          stream: false
         }),
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error('API Error Details:', errorData);
-        
-        if (response.status === 404) {
-          console.warn('Using fallback response: Model not found');
-          return fallbackResponses.default;
-        } else if (response.status === 401) {
-          console.warn('Using fallback response: Invalid API key');
-          return fallbackResponses.error;
-        } else if (response.status === 503) {
-          console.warn('Using fallback response: Model is loading');
-          return "The AI model is still loading. In the meantime, here's a tip: Start with the smallest possible version of your habit. For example, if you want to meditate, start with just 1 minute a day.";
-        } else {
-          console.warn('Using fallback response: API request failed');
-          return fallbackResponses.error;
-        }
+        return fallbackResponses.error;
       }
 
       const data = await response.json();
-      console.log('API Response:', data); // Debug log
-      
-      // Handle different response formats
-      let rawResponse = '';
-      if (Array.isArray(data) && data.length > 0) {
-        rawResponse = data[0].generated_text || fallbackResponses.default;
-      } else if (data.generated_text) {
-        rawResponse = data.generated_text;
-      } else {
-        console.error('Unexpected API response format:', data);
-        return fallbackResponses.default;
-      }
-
-      // Extract only the latest assistant reply after the last 'Assistant:'
-      const lastAssistantIdx = rawResponse.lastIndexOf('Assistant:');
-      let reply = rawResponse;
-      if (lastAssistantIdx !== -1) {
-        reply = rawResponse.substring(lastAssistantIdx + 'Assistant:'.length).trim();
-      }
-      // Remove any trailing 'User:' or 'Assistant:' prompts
-      reply = reply.replace(/^(User:|Assistant:)/, '').trim();
-
-      // Only fallback if the reply is very short or looks like a search query list
-      if (
-        reply.length < 30 ||
-        /^[,\\s]*how to/i.test(reply) || // starts with "how to"
-        /^[,\\s]*$/.test(reply) || // empty or just commas/spaces
-        (reply.split(',').length > 4 && reply.length < 200) || // looks like a list of queries
-        reply.toLowerCase().includes('my name is olivia') // or any other junk pattern
-      ) {
-        return "Sorry, the AI is currently overloaded or unavailable. Please try again in a few minutes, or ask a different question.";
-      }
-
-      return reply || fallbackResponses.default;
+      // Ollama returns the response in data.message.content
+      return data.message?.content?.trim() || fallbackResponses.default;
     } catch (error) {
       console.error('Error getting AI response:', error);
       return fallbackResponses.error;
     }
   };
 
-  // Handle sending a message
+  // Fix getAIResponseStream to use phi3:mini
+  const getAIResponseStream = async (text, onChunk) => {
+    const habitData = getUserHabitData();
+    const systemPrompt = `
+You are Coach Nova, a helpful and friendly habit and wellness assistant.
+Here is the user's habit data:
+- Current streak: ${habitData.streak}
+- Best streak: ${habitData.bestStreak}
+- Longest streak habit: ${habitData.longestStreakHabit || 'N/A'}
+- Points: ${habitData.points}
+- Most consistent habit: ${habitData.mostConsistentHabit || 'N/A'}
+- Habits: ${habitData.habits.map(h => h.name).join(', ') || 'None'}
+- Habits completed this week: ${Object.entries(habitData.completedThisWeek).map(([k,v]) => `${k} (${v})`).join(', ') || 'None'}
+- Last completed habit: ${habitData.lastCompletedHabit || 'N/A'}
+- Total completions (all time): ${habitData.totalCompletionsAllTime}
+- Average completions per week: ${habitData.avgCompletionsPerWeek}
+- Missed habits this week: ${Object.keys(habitData.missedThisWeek).join(', ') || 'None'}
+- Best month: ${habitData.bestMonth || 'N/A'} (${habitData.bestMonthCount} completions)
+- Most improved habit (last 30 days): ${habitData.mostImprovedHabit || 'N/A'} (+${habitData.maxStreakIncrease} streak)
+- Recent completions: ${Object.keys(habitData.calendarHistory).slice(-7).join(', ')}
+
+Answer user questions clearly and conversationally, using this data when relevant.
+`;
+
+    const response = await fetch(OLLAMA_API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "phi3:mini",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: text }
+        ],
+        stream: true,
+        flush: true
+      }),
+    });
+
+    if (!response.body) throw new Error("No response body");
+
+    // Use TextDecoderStream for modern browsers
+    const stream = response.body
+      .pipeThrough(new TextDecoderStream());
+    const reader = stream.getReader();
+
+    let fullText = "";
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      for (const line of value.split('\n')) {
+        if (line.trim()) {
+          try {
+            const data = JSON.parse(line);
+            const token = data.message?.content || "";
+            if (token) {
+              fullText += token;
+              onChunk(fullText);
+            }
+          } catch (e) {
+            // Ignore parse errors for incomplete lines
+          }
+        }
+      }
+    }
+    return fullText;
+  };
+
+  // In handleSendMessage, ensure onChunk updates the last AI message's text
   const handleSendMessage = async (text) => {
     if (!text.trim()) return;
-    
+    setInputText("");
     // Add user message
-    const newMessage = {
+    const userMessage = {
       id: messages.length + 1,
       text: text,
       sender: 'user',
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
-    
-    setMessages([...messages, newMessage]);
-    setInputText('');
+    setMessages(prev => [...prev, userMessage]);
     setIsTyping(true);
-    
+
+    // Add a placeholder AI message with isStreaming
+    const aiMessageId = messages.length + 2;
+    setMessages(prev => [...prev, {
+      id: aiMessageId,
+      text: "",
+      sender: 'ai',
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      isStreaming: true
+    }]);
+
     try {
-      // Get AI response
-      const aiResponse = await getAIResponse(text);
-      const cleanedResponse = cleanAIResponse(text, aiResponse);
-      
-      // Add AI response message
-      const aiMessage = {
-        id: messages.length + 2,
-        text: cleanedResponse,
-        sender: 'ai',
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      };
-      
-      setMessages(prev => [...prev, aiMessage]);
-      
+      await getAIResponseStream(text, (currentText) => {
+        setMessages(prev => {
+          const updated = [...prev];
+          const idx = updated.findIndex(m => m.id === aiMessageId);
+          if (idx !== -1) {
+            updated[idx] = { ...updated[idx], text: currentText };
+          }
+          return updated;
+        });
+      });
+
+      // Remove isStreaming flag when done
+      setMessages(prev => {
+        const updated = [...prev];
+        const idx = updated.findIndex(m => m.id === aiMessageId);
+        if (idx !== -1) {
+          updated[idx] = { ...updated[idx], isStreaming: false };
+        }
+        return updated;
+      });
+
       // Update remaining messages for free users
       if (remainingMessages > 0) {
         setRemainingMessages(prev => prev - 1);
       }
-      
+
       // Occasionally show mood check (20% chance)
       if (Math.random() < 0.2 && !showMoodCheck) {
         setTimeout(() => {
@@ -239,18 +590,15 @@ export default function AICoach({ onBack }) {
         }, 1000);
       }
 
-      const endsWithPunct = /[.!?]$/.test(cleanedResponse.trim());
-      setCanContinue(!endsWithPunct && cleanedResponse.length > 100); // adjust length as needed
+      setCanContinue(false);
     } catch (error) {
       console.error('Error in handleSendMessage:', error);
-      // Add error message
-      const errorMessage = {
-        id: messages.length + 2,
+      setMessages(prev => [...prev, {
+        id: messages.length + 3,
         text: "I'm sorry, I encountered an error. Please try again.",
         sender: 'ai',
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      };
-      setMessages(prev => [...prev, errorMessage]);
+      }]);
     } finally {
       setIsTyping(false);
     }
@@ -391,11 +739,13 @@ export default function AICoach({ onBack }) {
   useEffect(() => {
     // Try to get the user's name from localStorage first
     const storedName = localStorage.getItem('habitharmony_user_name');
+    // Update last visit timestamp
+    localStorage.setItem('habitharmony_last_visit', Date.now().toString());
     if (storedName) {
       setUserName(storedName);
       const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       setMessages([
-        { id: 1, text: `Hi ${storedName}! 👋 I'm Coach Nova, your personal habit assistant. How can I help you today?`, sender: 'ai', time: now }
+        { id: 1, text: getAdvancedPersonalizedGreeting(storedName), sender: 'ai', time: now }
       ]);
     } else {
       // Fallback: Try to fetch from API if not in localStorage
@@ -412,21 +762,21 @@ export default function AICoach({ onBack }) {
             setUserName(firstName);
             const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             setMessages([
-              { id: 1, text: `Hi ${firstName}! 👋 I'm Coach Nova, your personal habit assistant. How can I help you today?`, sender: 'ai', time: now }
+              { id: 1, text: getAdvancedPersonalizedGreeting(firstName), sender: 'ai', time: now }
             ]);
           })
           .catch(err => {
             setUserName('');
             const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             setMessages([
-              { id: 1, text: `Hi there! 👋 I'm Coach Nova, your personal habit assistant. How can I help you today?`, sender: 'ai', time: now }
+              { id: 1, text: getAdvancedPersonalizedGreeting(), sender: 'ai', time: now }
             ]);
           });
       } else {
         setUserName('');
         const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         setMessages([
-          { id: 1, text: `Hi there! 👋 I'm Coach Nova, your personal habit assistant. How can I help you today?`, sender: 'ai', time: now }
+          { id: 1, text: getAdvancedPersonalizedGreeting(), sender: 'ai', time: now }
         ]);
       }
     }
@@ -442,6 +792,173 @@ export default function AICoach({ onBack }) {
     setSelectedDay(dateStr);
     // Show modal or sidebar with details
   }
+
+  function getUserHabitData() {
+    const habits = JSON.parse(localStorage.getItem('habitharmony_user_habits') || '[]');
+    const streak = localStorage.getItem('habitharmony_streak') || '0';
+    const points = localStorage.getItem('habitharmony_points') || '0';
+    const calendarHistory = JSON.parse(localStorage.getItem('habitharmony_calendar_history') || '{}');
+
+    // Analytics
+    // 1. Most consistent habit (highest streak)
+    let mostConsistentHabit = null;
+    let bestStreak = 0;
+    let longestStreakHabit = null;
+    habits.forEach(h => {
+      if (h.streak && h.streak > bestStreak) {
+        bestStreak = h.streak;
+        mostConsistentHabit = h.name;
+        longestStreakHabit = h.name;
+      }
+    });
+
+    // 2. Habits completed this week
+    const today = new Date();
+    const weekStart = new Date(today);
+    weekStart.setDate(today.getDate() - today.getDay()); // Sunday
+    const completedThisWeek = {};
+    let totalCompletionsAllTime = 0;
+    let completionsByWeek = {};
+    let completionsByMonth = {};
+    let missedThisWeek = {};
+    Object.entries(calendarHistory).forEach(([date, completedIds]) => {
+      const d = new Date(date);
+      // Count completions for all time
+      totalCompletionsAllTime += completedIds.length;
+      // Count completions by week
+      const weekKey = `${d.getFullYear()}-W${getWeekNumber(d)}`;
+      completionsByWeek[weekKey] = (completionsByWeek[weekKey] || 0) + completedIds.length;
+      // Count completions by month
+      const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      completionsByMonth[monthKey] = (completionsByMonth[monthKey] || 0) + completedIds.length;
+      // This week
+      if (d >= weekStart && d <= today) {
+        completedIds.forEach(id => {
+          const habit = habits.find(h => h.id === id);
+          if (habit) {
+            completedThisWeek[habit.name] = (completedThisWeek[habit.name] || 0) + 1;
+          }
+        });
+      }
+    });
+    // Calculate average completions per week
+    const weekCounts = Object.values(completionsByWeek);
+    const avgCompletionsPerWeek = weekCounts.length ? (weekCounts.reduce((a, b) => a + b, 0) / weekCounts.length).toFixed(2) : '0';
+
+    // Best month (most completions in a month)
+    let bestMonth = null;
+    let bestMonthCount = 0;
+    Object.entries(completionsByMonth).forEach(([month, count]) => {
+      if (count > bestMonthCount) {
+        bestMonthCount = count;
+        bestMonth = month;
+      }
+    });
+
+    // Missed habits this week
+    habits.forEach(habit => {
+      const completed = completedThisWeek[habit.name] || 0;
+      if (completed === 0) {
+        missedThisWeek[habit.name] = true;
+      }
+    });
+
+    // 3. Last completed habit
+    let lastCompletedHabit = null;
+    const sortedDates = Object.keys(calendarHistory).sort((a, b) => new Date(b) - new Date(a));
+    for (const date of sortedDates) {
+      const completedIds = calendarHistory[date];
+      if (completedIds && completedIds.length > 0) {
+        const habit = habits.find(h => h.id === completedIds[0]);
+        if (habit) {
+          lastCompletedHabit = habit.name;
+          break;
+        }
+      }
+    }
+
+    // Most improved habit (largest streak increase in last 30 days)
+    let mostImprovedHabit = null;
+    let maxStreakIncrease = 0;
+    // For demo: assume each habit has a streakHistory array in localStorage (not implemented in your code, so fallback to streak)
+    // If you want to track streak history, you would update this logic
+    habits.forEach(habit => {
+      // Simulate: streak 30 days ago is 0, now is habit.streak
+      const streak30DaysAgo = 0;
+      const increase = habit.streak - streak30DaysAgo;
+      if (increase > maxStreakIncrease) {
+        maxStreakIncrease = increase;
+        mostImprovedHabit = habit.name;
+      }
+    });
+
+    return {
+      habits,
+      streak,
+      points,
+      calendarHistory,
+      mostConsistentHabit,
+      bestStreak,
+      completedThisWeek,
+      lastCompletedHabit,
+      totalCompletionsAllTime,
+      avgCompletionsPerWeek,
+      longestStreakHabit,
+      missedThisWeek,
+      bestMonth,
+      bestMonthCount,
+      mostImprovedHabit,
+      maxStreakIncrease
+    };
+  }
+
+  // Helper to get ISO week number
+  function getWeekNumber(d) {
+    d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+    d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay()||7));
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
+    const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1)/7);
+    return weekNo;
+  }
+
+  // Payment handler
+  const handleRazorpayPayment = async () => {
+    setUpgradeStep('processing');
+    const loaded = await loadRazorpayScript();
+    if (!loaded) {
+      setUpgradeStep('error');
+      setUpgradeError('Failed to load payment gateway.');
+      return;
+    }
+    const options = {
+      key: 'rzp_test_1DP5mmOlF5G5ag', // Demo key, replace with your real key
+      amount: selectedPlan === 'monthly' ? 10000 : 79900, // in paise
+      currency: 'INR',
+      name: 'Habit Harmony',
+      description: selectedPlan === 'monthly' ? 'Monthly Premium' : 'Yearly Premium',
+      image: '',
+      handler: function (response) {
+        // On success
+        localStorage.setItem('habitharmony_premium', 'true');
+        setPremium(true);
+        setUpgradeStep('success');
+      },
+      prefill: {
+        name: '',
+        email: '',
+      },
+      theme: {
+        color: '#F75836',
+      },
+      modal: {
+        ondismiss: () => {
+          setUpgradeStep('plans');
+        }
+      }
+    };
+    const rzp = new window.Razorpay(options);
+    rzp.open();
+  };
 
   return (
     <div className="min-h-screen font-display bg-[#F8F3F3] pb-24 relative flex flex-col">
@@ -491,18 +1008,159 @@ export default function AICoach({ onBack }) {
             <Bell size={18} />
           </div>
           <div>
-            <h3 className="font-medium text-blue-700">Free Plan: {remainingMessages}/5 coaching sessions left</h3>
-            <p className="text-sm text-blue-600 mt-1">Get unlimited coaching with Premium!</p>
+            <h3 className="font-medium text-blue-700">
+              {premium ? (
+                <span className="inline-flex items-center gap-2 text-green-600">
+                  <Award size={16} className="inline-block" /> Premium Member
+                </span>
+              ) : (
+                <>Free Plan: {remainingMessages}/5 coaching sessions left</>
+              )}
+            </h3>
+            <p className="text-sm text-blue-600 mt-1">
+              {premium ? 'You have unlimited coaching!' : 'Get unlimited coaching with Premium!'}
+            </p>
+            {!premium && (
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="mt-2 bg-[#F75836] text-white text-sm py-1 px-3 rounded-full"
+                onClick={() => { setShowUpgradeModal(true); setUpgradeStep('plans'); }}
+              >
+                Upgrade
+              </motion.button>
+            )}
+            {premium && (
+              <button
+                className="mt-4 text-blue-600 underline"
+                onClick={() => setShowManageSubscription(true)}
+              >
+                Manage Subscription
+              </button>
+            )}
           </div>
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className="ml-auto bg-[#F75836] text-white text-sm py-1 px-3 rounded-full"
-          >
-            Upgrade
-          </motion.button>
         </div>
       </motion.div>
+
+      {/* Manage Subscription Modal */}
+      <AnimatePresence>
+        {showManageSubscription && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-end justify-center"
+          >
+            <div className="fixed inset-0 bg-black opacity-40" onClick={() => setShowManageSubscription(false)} />
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              className="relative bg-white rounded-t-2xl p-6 z-50 max-w-md w-full mx-auto shadow-lg"
+            >
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="font-bold text-lg">Manage Subscription</h2>
+                <button onClick={() => setShowManageSubscription(false)} className="text-gray-400">
+                  <X size={20} />
+                </button>
+              </div>
+              <div>
+                <p className="mb-4">To cancel or change your subscription, please contact <a href="mailto:support@habitharmony.com" className="underline text-blue-600">support@habitharmony.com</a> or visit your payment provider's dashboard.</p>
+                <button className="bg-[#F75836] text-white px-6 py-2 rounded-full font-semibold" onClick={() => setShowManageSubscription(false)}>
+                  Close
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Upgrade Modal */}
+      <AnimatePresence>
+        {showUpgradeModal && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.5 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black z-40"
+              onClick={() => setShowUpgradeModal(false)}
+            />
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              className="fixed bottom-0 left-0 right-0 bg-white rounded-t-2xl p-6 z-50 max-w-md mx-auto shadow-lg"
+            >
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="font-bold text-lg">Upgrade to Premium</h2>
+                <motion.button
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() => setShowUpgradeModal(false)}
+                  className="text-gray-400"
+                >
+                  <X size={20} />
+                </motion.button>
+              </div>
+              {upgradeStep === 'plans' && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-4 border rounded-xl">
+                    <div>
+                      <div className="font-semibold">Monthly</div>
+                      <div className="text-gray-500 text-sm">₹100 / month</div>
+                    </div>
+                    <button className="bg-[#F75836] text-white px-4 py-2 rounded-full font-semibold" onClick={() => { setSelectedPlan('monthly'); setUpgradeStep('confirm'); }}>Choose</button>
+                  </div>
+                  <div className="flex items-center justify-between p-4 border rounded-xl">
+                    <div>
+                      <div className="font-semibold">Yearly</div>
+                      <div className="text-gray-500 text-sm">₹799 / year</div>
+                    </div>
+                    <button className="bg-[#F75836] text-white px-4 py-2 rounded-full font-semibold" onClick={() => { setSelectedPlan('yearly'); setUpgradeStep('confirm'); }}>Choose</button>
+                  </div>
+                </div>
+              )}
+              {upgradeStep === 'confirm' && (
+                <div className="space-y-6">
+                  <div className="text-center">
+                    <div className="text-lg font-semibold mb-2">Confirm your plan</div>
+                    <div className="mb-4">
+                      {selectedPlan === 'monthly' ? 'Monthly Premium – ₹100 / month' : 'Yearly Premium – ₹799 / year'}
+                    </div>
+                    <button className="bg-[#F75836] text-white px-6 py-2 rounded-full font-semibold" onClick={handleRazorpayPayment}>Proceed to Payment</button>
+                    <button className="block mx-auto mt-3 text-gray-500 underline" onClick={() => setUpgradeStep('plans')}>Back</button>
+                  </div>
+                </div>
+              )}
+              {upgradeStep === 'processing' && (
+                <div className="text-center py-8">
+                  <div className="text-lg font-semibold mb-2">Processing payment...</div>
+                  <div className="text-gray-500">Please wait and do not close this window.</div>
+                </div>
+              )}
+              {upgradeStep === 'success' && (
+                <div className="text-center py-8">
+                  <div className="text-green-600 text-2xl mb-2">✔</div>
+                  <div className="text-lg font-semibold mb-2">Thank you for upgrading!</div>
+                  <div className="text-gray-600 mb-4">You are now a Premium member. Enjoy unlimited coaching and exclusive features.</div>
+                  <button className="bg-[#F75836] text-white px-6 py-2 rounded-full font-semibold" onClick={() => { setShowUpgradeModal(false); setUpgradeStep('plans'); }}>Get Started</button>
+                </div>
+              )}
+              {upgradeStep === 'error' && (
+                <div className="text-center py-8">
+                  <div className="text-red-600 text-2xl mb-2">✖</div>
+                  <div className="text-lg font-semibold mb-2">Payment failed</div>
+                  <div className="text-gray-600 mb-4">{upgradeError || 'Something went wrong. Please try again.'}</div>
+                  <button className="bg-[#F75836] text-white px-6 py-2 rounded-full font-semibold" onClick={() => setUpgradeStep('plans')}>Back to Plans</button>
+                </div>
+              )}
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* Main Chat Area */}
       <div className="flex-1 px-4 pt-3 pb-20 overflow-y-auto">
@@ -555,40 +1213,6 @@ export default function AICoach({ onBack }) {
             </motion.div>
           ))}
           
-          {/* AI Typing Indicator */}
-          {isTyping && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="flex justify-start"
-            >
-              <div className="relative max-w-xs sm:max-w-md">
-                <div className="absolute -left-10 top-1 size-8 bg-[#F75836] rounded-full flex items-center justify-center text-white text-xs font-bold">
-                  CN
-                </div>
-                <div className="rounded-2xl p-4 bg-white border border-gray-200 rounded-tl-none">
-                  <div className="flex space-x-1">
-                    <motion.div
-                      animate={{ y: [0, -5, 0] }}
-                      transition={{ repeat: Infinity, duration: 1, delay: 0 }}
-                      className="bg-gray-300 h-2 w-2 rounded-full"
-                    />
-                    <motion.div
-                      animate={{ y: [0, -5, 0] }}
-                      transition={{ repeat: Infinity, duration: 1, delay: 0.2 }}
-                      className="bg-gray-300 h-2 w-2 rounded-full"
-                    />
-                    <motion.div
-                      animate={{ y: [0, -5, 0] }}
-                      transition={{ repeat: Infinity, duration: 1, delay: 0.4 }}
-                      className="bg-gray-300 h-2 w-2 rounded-full"
-                    />
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          )}
-          
           {/* Mood Check Prompt */}
           <AnimatePresence>
             {showMoodCheck && (
@@ -639,6 +1263,39 @@ export default function AICoach({ onBack }) {
                 Continue
               </button>
             </div>
+          )}
+          
+          {isTyping && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="flex justify-start"
+            >
+              <div className="relative max-w-xs sm:max-w-md">
+                <div className="absolute -left-10 top-1 size-8 bg-[#F75836] rounded-full flex items-center justify-center text-white text-xs font-bold">
+                  CN
+                </div>
+                <div className="rounded-2xl p-4 bg-white border border-gray-200 rounded-tl-none">
+                  <div className="flex space-x-1">
+                    <motion.div
+                      animate={{ y: [0, -5, 0] }}
+                      transition={{ repeat: Infinity, duration: 1, delay: 0 }}
+                      className="bg-gray-300 h-2 w-2 rounded-full"
+                    />
+                    <motion.div
+                      animate={{ y: [0, -5, 0] }}
+                      transition={{ repeat: Infinity, duration: 1, delay: 0.2 }}
+                      className="bg-gray-300 h-2 w-2 rounded-full"
+                    />
+                    <motion.div
+                      animate={{ y: [0, -5, 0] }}
+                      transition={{ repeat: Infinity, duration: 1, delay: 0.4 }}
+                      className="bg-gray-300 h-2 w-2 rounded-full"
+                    />
+                  </div>
+                </div>
+              </div>
+            </motion.div>
           )}
           
           <div ref={messagesEndRef} />
