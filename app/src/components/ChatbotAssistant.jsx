@@ -1,291 +1,853 @@
-import React, { useState, useRef, useEffect } from "react";
-import { Send, ArrowLeft, Bot } from "lucide-react";
+import { useState, useEffect, useRef } from 'react';
+import { 
+  MessageSquare, BookmarkPlus, Send, Smile, PlusCircle, 
+  ArrowUp, ChevronRight, X, Award, MoreHorizontal, ChevronDown,
+  User, Bell, Calendar, Zap, Sun, ArrowLeft
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
+import api from '../services/api';
+import maradImg from '../assets/marad.png';
 
-const ChatBubble = ({ message, isUser }) => {
-  return (
-    <div className={`flex ${isUser ? "justify-end" : "justify-start"} mb-4`}>
-      <div className={`flex items-start ${isUser ? "flex-row-reverse" : ""}`}>
-        {!isUser && (
-          <div className="bg-[#914938] text-white p-2 rounded-full mr-2">
-            <Bot size={20} />
-          </div>
-        )}
-        <div
-          className={`px-4 py-3 rounded-2xl max-w-xs sm:max-w-md ${
-            isUser
-              ? "bg-[#3B82F6] text-white rounded-bl-2xl"
-              : "bg-white border border-gray-200 text-gray-800 rounded-br-2xl"
-          }`}
-        >
-          <p className="text-sm">{message.text}</p>
-        </div>
-        {isUser && (
-          <div className="bg-[#3B82F6] text-white p-2 rounded-full ml-2">
-            <div className="w-5 h-5 flex items-center justify-center text-xs font-bold">
-              U
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
+// Hugging Face API configuration
+const HF_API_URL = "https://api-inference.huggingface.co/models/HuggingFaceH4/zephyr-7b-beta";
+const HF_API_KEY = import.meta.env.VITE_HUGGINGFACE_API_KEY;
+
+// Fallback responses for when API is not available
+const fallbackResponses = {
+  greeting: "Hello! I'm your AI coach. How can I help you today?",
+  error: "I'm having trouble connecting right now. Here are some tips:\n\n1. Start with small, achievable goals\n2. Track your progress daily\n3. Celebrate small wins\n4. Stay consistent\n\nWould you like me to elaborate on any of these points?",
+  default: "I understand you're working on building better habits. Remember that consistency is key, and it's okay to have setbacks. What specific area would you like to focus on?"
 };
 
-const QuickOption = ({ text, onClick }) => {
-  return (
-    <button
-      onClick={() => onClick(text)}
-      className="bg-white border border-gray-300 text-[#914938] px-4 py-2 rounded-full text-sm font-medium hover:bg-gray-50 transition-colors whitespace-nowrap mb-2 mr-2"
-    >
-      {text}
-    </button>
-  );
-};
+// Check if API key is configured
+if (!HF_API_KEY) {
+  console.error('Hugging Face API key is not configured. Please add VITE_HUGGINGFACE_API_KEY to your .env file');
+}
 
-const ChatbotAssistant = ({ onClose }) => {
-  const [messages, setMessages] = useState([
-    {
-      text: "Hello! I'm your Habit Harmony Assistant. How can I help you today?",
-      isUser: false,
-    },
-  ]);
-  const [input, setInput] = useState("");
-  const [quickOptions, setQuickOptions] = useState([
-    "Habit Formation & Productivity",
-    "Motivation & Mindset",
-    "Time Management & Scheduling",
-    "Health & Well-being",
-    "Breaking Bad Habits",
-    "Personalized Advice & Reflection",
-  ]);
-  const [selectedCategory, setSelectedCategory] = useState(null);
+// Function to clean AI response and remove echoed user input
+function cleanAIResponse(userInput, aiOutput) {
+  // Remove the first line if it contains the user's input (case-insensitive, ignoring punctuation)
+  const normalizedInput = userInput.trim().toLowerCase().replace(/[?.!,]/g, '');
+  const lines = aiOutput.split('\n');
+  if (lines.length > 1) {
+    const firstLine = lines[0].trim().toLowerCase().replace(/[?.!,]/g, '');
+    if (firstLine.includes(normalizedInput)) {
+      return lines.slice(1).join('\n').trim();
+    }
+  }
+  // Also remove the prompt if it appears at the very start of the response (even if not on a new line)
+  const aiOutputNormalized = aiOutput.trim().toLowerCase().replace(/[?.!,]/g, '');
+  if (aiOutputNormalized.startsWith(normalizedInput)) {
+    return aiOutput.trim().slice(userInput.length).trim();
+  }
+  return aiOutput.trim();
+}
+
+// Main AI Coach Component
+export default function AICoach({ onBack }) {
+  const [messages, setMessages] = useState([]);
+  const [inputText, setInputText] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(true);
+  const [currentMood, setCurrentMood] = useState(null);
+  const [remainingMessages, setRemainingMessages] = useState(5); // For free tier users
+  const [showMoodCheck, setShowMoodCheck] = useState(false);
+  const [showHabitTools, setShowHabitTools] = useState(false);
+  const [showSavedTips, setShowSavedTips] = useState(false);
   const messagesEndRef = useRef(null);
+  const navigate = useNavigate();
+  const [userName, setUserName] = useState('');
+  const [selectedDay, setSelectedDay] = useState(null);
+  const [canContinue, setCanContinue] = useState(false);
+  
+  // Mock data - saved tips
+  const savedTips = [
+    { id: 1, text: "Remember to take small steps when building new habits", tag: "Routine", saved: true },
+    { id: 2, text: "When feeling stuck, try the 2-minute rule - commit to just 2 minutes of your habit", tag: "Focus", saved: true },
+    { id: 3, text: "Habit stacking works by connecting new habits to existing routines", tag: "Routine", saved: true },
+  ];
 
-  const categoryQuestions = {
-    "Habit Formation & Productivity": [
-      "How can I stay consistent with my habits?",
-      "What are some good morning routines?",
-      "How long does it take to form a new habit?",
-      "How can I stop procrastinating?",
-    ],
-    "Motivation & Mindset": [
-      "How can I stay motivated?",
-      "What should I do when I feel like giving up?",
-      "How do I build a growth mindset?",
-      "Tips for positive thinking",
-    ],
-    "Time Management & Scheduling": [
-      "How do I create an effective schedule?",
-      "What's the Pomodoro technique?",
-      "How can I balance multiple priorities?",
-      "Tips for reducing distractions",
-    ],
-    "Health & Well-being": [
-      "How much water should I drink daily?",
-      "Tips for better sleep",
-      "How can I reduce stress?",
-      "Simple exercises for desk workers",
-    ],
-    "Breaking Bad Habits": [
-      "How do I break a bad habit?",
-      "What's the best way to quit smoking?",
-      "How can I reduce screen time?",
-      "Strategies for emotional eating",
-    ],
-    "Personalized Advice & Reflection": [
-      "How do I assess my progress?",
-      "When should I adjust my goals?",
-      "How can I reflect on my habits effectively?",
-      "Setting realistic expectations",
-    ],
+  // Mock suggestions based on user context
+  const suggestions = [
+    "Suggest a morning routine",
+    "I broke my streak. What now?",
+    "I feel demotivated today",
+    "How can I build consistency?",
+    "Tips for breaking bad habits"
+  ];
+
+  // Mock habit tool options
+  const habitTools = [
+    { title: "Build a New Habit", icon: "➕", description: "Create a sustainable new habit with personalized guidance" },
+    { title: "Break a Bad Habit", icon: "❌", description: "Replace unwanted behaviors with healthy alternatives" },
+    { title: "Streak Saver Mode", icon: "🔥", description: "Get motivation when you're about to break a streak" },
+    { title: "Smart Suggestions", icon: "💡", description: "Get AI-powered habit recommendations" }
+  ];
+
+  // Mood options
+  const moodOptions = [
+    { emoji: "😊", label: "Happy" },
+    { emoji: "😐", label: "Neutral" },
+    { emoji: "😔", label: "Sad" },
+    { emoji: "😤", label: "Frustrated" },
+    { emoji: "😴", label: "Tired" }
+  ];
+
+  // Auto-scroll to bottom of messages
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  // Simulated AI response generator with relevant habit advice
-  const generateAIResponse = (userMessage) => {
-    const lowerMsg = userMessage.toLowerCase();
-    
-    // Responses for category questions
-    if (lowerMsg.includes("stay consistent")) {
-      return "To stay consistent with habits, try these proven strategies:\n\n1. Start with tiny habits that are easy to maintain\n2. Use habit stacking (link new habits to existing ones)\n3. Track your progress visually\n4. Set up environmental triggers\n5. Find an accountability partner\n\nWhich habit are you currently working on?";
-    } else if (lowerMsg.includes("morning routine")) {
-      return "Effective morning routines typically include:\n\n• Hydrating first thing after waking\n• Movement/exercise (even just 5-10 minutes)\n• Mindfulness practice or gratitude journaling\n• Planning your top priorities for the day\n• Nutritious breakfast\n\nWould you like help designing a specific morning routine for your needs?";
-    } else if (lowerMsg.includes("form a new habit")) {
-      return "Research shows forming a new habit takes anywhere from 18 to 254 days, with 66 days being the average. The key factors are:\n\n• Consistency (doing it daily)\n• Starting tiny (making it easy to succeed)\n• Clear cue-routine-reward loop\n• Tracking progress\n• Environmental design\n\nWhat new habit are you trying to form?";
-    } else if (lowerMsg.includes("procrastinat")) {
-      return "To overcome procrastination:\n\n1. Break tasks into smaller chunks\n2. Use the 5-minute rule (just start for 5 minutes)\n3. Eliminate distractions during focus periods\n4. Use the Pomodoro technique (25 min work, 5 min break)\n5. Create external accountability\n\nWhich specific task are you procrastinating on?";
-    } else if (lowerMsg.includes("stay motivated")) {
-      return "To maintain motivation:\n\n• Connect your habits to your deeper values and goals\n• Track progress visually to see how far you've come\n• Build a streak and don't break the chain\n• Join communities with similar goals\n• Celebrate small wins regularly\n\nWhat specific goal are you working toward?";
-    } else if (lowerMsg.includes("water")) {
-      return "For optimal hydration, the general guideline is about 8 glasses (64 oz) of water daily, but individual needs vary based on:\n\n• Activity level\n• Climate\n• Body size\n• Health conditions\n\nWould you like to set up water intake reminders in the app?";
-    } else if (lowerMsg.includes("sleep")) {
-      return "For better sleep quality:\n\n• Maintain consistent sleep/wake times\n• Create a relaxing bedtime routine\n• Avoid screens 1 hour before bed (blue light)\n• Keep your bedroom cool, dark, and quiet\n• Limit caffeine after noon and alcohol near bedtime\n\nWhich aspect of sleep are you struggling with?";
-    } else if (lowerMsg.includes("quit") && lowerMsg.includes("smoking")) {
-      return "Quitting smoking effectively often requires a multi-faceted approach:\n\n• Consider nicotine replacement therapy\n• Identify and avoid triggers\n• Create new habits to replace smoking\n• Join support groups\n• Use the app to track your smoke-free streak\n\nWould you like to set up a smoking cessation plan in the app?";
-    } else if (lowerMsg.includes("schedule") || lowerMsg.includes("time management")) {
-      return "For effective scheduling:\n\n• Time-block your day into focused segments\n• Schedule important tasks during your peak energy times\n• Include buffer time between activities\n• Batch similar tasks together\n• Set realistic time estimates (add 50% more time)\n\nWould you like to integrate this with your calendar?";
-    } else {
-      return "I understand you're interested in " + userMessage + ". This is an important aspect of building healthy habits. Could you tell me more specifically what you're trying to achieve?";
+  // Function to get AI response from Hugging Face
+  const getAIResponse = async (text) => {
+    try {
+      // First, check if the API key is configured
+      if (!HF_API_KEY) {
+        console.warn('Using fallback response: API key not configured');
+        return fallbackResponses.default;
+      }
+
+      const systemPrompt = "You are Coach Nova, a helpful and friendly habit and wellness assistant. Answer user questions clearly and conversationally. Do not repeat the user's question. If you don't know, say so politely.\n";
+      const history = messages
+        .filter(m => m.sender === 'user' || m.sender === 'ai')
+        .map(m => `${m.sender === 'user' ? 'User' : 'Assistant'}: ${m.text}`)
+        .join('\n');
+      const prompt = systemPrompt + history + `\nUser: ${text}\nAssistant:`;
+
+      const response = await fetch(HF_API_URL, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${HF_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          inputs: text,
+          parameters: {
+            max_new_tokens: 350,
+            temperature: 0.7,
+            top_p: 0.95,
+            repetition_penalty: 1.1
+          }
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('API Error Details:', errorData);
+        
+        if (response.status === 404) {
+          console.warn('Using fallback response: Model not found');
+          return fallbackResponses.default;
+        } else if (response.status === 401) {
+          console.warn('Using fallback response: Invalid API key');
+          return fallbackResponses.error;
+        } else if (response.status === 503) {
+          console.warn('Using fallback response: Model is loading');
+          return "The AI model is still loading. In the meantime, here's a tip: Start with the smallest possible version of your habit. For example, if you want to meditate, start with just 1 minute a day.";
+        } else {
+          console.warn('Using fallback response: API request failed');
+          return fallbackResponses.error;
+        }
+      }
+
+      const data = await response.json();
+      console.log('API Response:', data); // Debug log
+      
+      // Handle different response formats
+      let rawResponse = '';
+      if (Array.isArray(data) && data.length > 0) {
+        rawResponse = data[0].generated_text || fallbackResponses.default;
+      } else if (data.generated_text) {
+        rawResponse = data.generated_text;
+      } else {
+        console.error('Unexpected API response format:', data);
+        return fallbackResponses.default;
+      }
+
+      // Extract only the latest assistant reply after the last 'Assistant:'
+      const lastAssistantIdx = rawResponse.lastIndexOf('Assistant:');
+      let reply = rawResponse;
+      if (lastAssistantIdx !== -1) {
+        reply = rawResponse.substring(lastAssistantIdx + 'Assistant:'.length).trim();
+      }
+      // Remove any trailing 'User:' or 'Assistant:' prompts
+      reply = reply.replace(/^(User:|Assistant:)/, '').trim();
+
+      // Only fallback if the reply is very short or looks like a search query list
+      if (
+        reply.length < 30 ||
+        /^[,\\s]*how to/i.test(reply) || // starts with "how to"
+        /^[,\\s]*$/.test(reply) || // empty or just commas/spaces
+        (reply.split(',').length > 4 && reply.length < 200) || // looks like a list of queries
+        reply.toLowerCase().includes('my name is olivia') // or any other junk pattern
+      ) {
+        return "Sorry, the AI is currently overloaded or unavailable. Please try again in a few minutes, or ask a different question.";
+      }
+
+      return reply || fallbackResponses.default;
+    } catch (error) {
+      console.error('Error getting AI response:', error);
+      return fallbackResponses.error;
     }
   };
 
-  const handleSend = () => {
-    if (input.trim() === "") return;
+  // Handle sending a message
+  const handleSendMessage = async (text) => {
+    if (!text.trim()) return;
     
-    const newUserMessage = { text: input, isUser: true };
-    setMessages([...messages, newUserMessage]);
-    setInput("");
+    // Add user message
+    const newMessage = {
+      id: messages.length + 1,
+      text: text,
+      sender: 'user',
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
     
-    // Simulate AI thinking time
-    setTimeout(() => {
-      const aiResponse = { 
-        text: generateAIResponse(input), 
-        isUser: false 
-      };
-      setMessages(prev => [...prev, aiResponse]);
+    setMessages([...messages, newMessage]);
+    setInputText('');
+    setIsTyping(true);
+    
+    try {
+      // Get AI response
+      const aiResponse = await getAIResponse(text);
+      const cleanedResponse = cleanAIResponse(text, aiResponse);
       
-      // Reset to main menu after answering a specific question
-      if (selectedCategory) {
+      // Add AI response message
+      const aiMessage = {
+        id: messages.length + 2,
+        text: cleanedResponse,
+        sender: 'ai',
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+      
+      setMessages(prev => [...prev, aiMessage]);
+      
+      // Update remaining messages for free users
+      if (remainingMessages > 0) {
+        setRemainingMessages(prev => prev - 1);
+      }
+      
+      // Occasionally show mood check (20% chance)
+      if (Math.random() < 0.2 && !showMoodCheck) {
         setTimeout(() => {
-          setMessages(prev => [
-            ...prev, 
-            { 
-              text: "Would you like to explore another topic?", 
-              isUser: false 
-            }
-          ]);
-          setSelectedCategory(null);
-          setQuickOptions([
-            "Habit Formation & Productivity",
-            "Motivation & Mindset",
-            "Time Management & Scheduling",
-            "Health & Well-being",
-            "Breaking Bad Habits",
-            "Personalized Advice & Reflection",
-          ]);
+          setShowMoodCheck(true);
         }, 1000);
       }
-    }, 800);
+
+      const endsWithPunct = /[.!?]$/.test(cleanedResponse.trim());
+      setCanContinue(!endsWithPunct && cleanedResponse.length > 100); // adjust length as needed
+    } catch (error) {
+      console.error('Error in handleSendMessage:', error);
+      // Add error message
+      const errorMessage = {
+        id: messages.length + 2,
+        text: "I'm sorry, I encountered an error. Please try again.",
+        sender: 'ai',
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsTyping(false);
+    }
   };
 
-  const handleQuickOption = (option) => {
-    // Handle category selection
-    if (!selectedCategory && categoryQuestions[option]) {
-      setSelectedCategory(option);
-      
-      const newUserMessage = { text: option, isUser: true };
-      setMessages([...messages, newUserMessage]);
+  // Handle quick suggestion clicks
+  const handleSuggestionClick = async (suggestion) => {
+    setShowSuggestions(false);
+    setIsTyping(true);
+    const newMessage = {
+      id: messages.length + 1,
+      text: suggestion,
+      sender: 'user',
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+    setMessages(prev => [...prev, newMessage]);
+    const aiResponse = await getAIResponse(suggestion);
+    const cleanedResponse = cleanAIResponse(suggestion, aiResponse);
+    const aiMessage = {
+      id: messages.length + 2,
+      text: cleanedResponse,
+      sender: 'ai',
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+    setMessages(prev => [...prev, aiMessage]);
+    setIsTyping(false);
+    setShowSuggestions(true);
+  };
+
+  // Handle mood selection
+  const handleMoodSelection = (mood) => {
+    setCurrentMood(mood);
+    setShowMoodCheck(false);
+    
+    // Add mood as a system message
+    const moodMessage = {
+      id: messages.length + 1,
+      text: `You're feeling ${mood.label} ${mood.emoji}`,
+      sender: 'system',
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+    
+    setMessages([...messages, moodMessage]);
+    
+    // Simulate AI responding to mood
+    setTimeout(() => {
+      setIsTyping(true);
       
       setTimeout(() => {
-        const aiResponse = { 
-          text: `Here are some common questions about ${option}:`, 
-          isUser: false 
+        const moodResponse = {
+          id: messages.length + 2,
+          text: getMoodResponse(mood),
+          sender: 'ai',
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         };
-        setMessages(prev => [...prev, aiResponse]);
-        setQuickOptions(categoryQuestions[option] || []);
-      }, 500);
-    } 
-    // Handle specific question selection
-    else if (selectedCategory) {
-      const userQuestion = { text: option, isUser: true };
-      setMessages([...messages, userQuestion]);
-      
-      setTimeout(() => {
-        const aiResponse = { 
-          text: generateAIResponse(option), 
-          isUser: false 
-        };
-        setMessages(prev => [...prev, aiResponse]);
         
-        // After answering, return to main menu with slight delay
-        setTimeout(() => {
-          setMessages(prev => [
-            ...prev, 
-            { 
-              text: "Would you like to explore another topic?", 
-              isUser: false 
-            }
-          ]);
-          setSelectedCategory(null);
-          setQuickOptions([
-            "Habit Formation & Productivity",
-            "Motivation & Mindset",
-            "Time Management & Scheduling",
-            "Health & Well-being",
-            "Breaking Bad Habits",
-            "Personalized Advice & Reflection",
-          ]);
-        }, 1000);
-      }, 800);
+        setMessages(prev => [...prev, moodResponse]);
+        setIsTyping(false);
+      }, 1500);
+    }, 500);
+  };
+
+  // Generate response based on mood
+  const getMoodResponse = (mood) => {
+    switch(mood.label) {
+      case 'Happy':
+        return "That's great to hear you're feeling happy! This positive energy is perfect for tackling your habits. Would you like to channel this energy into starting something new or building on your existing routines?";
+      case 'Neutral':
+        return "Thanks for sharing. A neutral mood can be a good baseline for consistent habit work. Would you like me to suggest a simple win that might boost your mood while making progress on your goals?";
+      case 'Sad':
+        return "I'm sorry you're feeling sad today. Remember that it's okay to have off days. Would a gentle self-care habit help? Or would you prefer some simple activities that might help lift your mood?";
+      case 'Frustrated':
+        return "I understand frustration can be challenging. Is there a specific habit or goal that's causing this feeling? Sometimes breaking things down into smaller steps can help reduce that frustration.";
+      case 'Tired':
+        return "I hear you're feeling tired. Rest is an important part of any habit system. Would you like suggestions for low-energy habits you can do today, or would you prefer tips for improving your energy levels?";
+      default:
+        return "Thank you for sharing how you're feeling. How can I help support your habit goals today?";
     }
   };
 
-  const handleKeyDown = (e) => {
-    if (e.key === "Enter") {
-      handleSend();
+  // Handle selecting a habit tool
+  const handleSelectHabitTool = (tool) => {
+    setShowHabitTools(false);
+    
+    // Add system message about tool selection
+    const toolMessage = {
+      id: messages.length + 1,
+      text: `You've selected: ${tool.title}`,
+      sender: 'system',
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+    
+    setMessages([...messages, toolMessage]);
+    
+    // Simulate AI starting the habit flow
+    setTimeout(() => {
+      setIsTyping(true);
+      
+      setTimeout(() => {
+        const habitToolResponse = {
+          id: messages.length + 2,
+          text: getHabitToolResponse(tool),
+          sender: 'ai',
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        };
+        
+        setMessages(prev => [...prev, habitToolResponse]);
+        setIsTyping(false);
+      }, 1500);
+    }, 500);
+  };
+
+  // Generate response based on selected habit tool
+  const getHabitToolResponse = (tool) => {
+    switch(tool.title) {
+      case 'Build a New Habit':
+        return "Let's create a new habit together! To get started:\n\n1. What specific habit would you like to build?\n2. When during the day would be ideal to perform this habit?\n3. How often would you like to do it (daily, specific days, etc.)?\n\nOnce you share these details, I can help you create a sustainable plan!";
+      case 'Break a Bad Habit':
+        return "Breaking habits effectively is about understanding and replacing them. Let's work through this:\n\n1. What specific habit would you like to break?\n2. When does this habit typically occur? (time of day, triggers, emotions)\n3. What healthier alternative could replace this habit?\n\nWith these insights, we can develop an effective strategy!";
+      case 'Streak Saver Mode':
+        return "Streak Saver activated! Which habit streak are you concerned about maintaining? I'll help you find a way to keep it going even on challenging days with minimum viable effort.";
+      case 'Smart Suggestions':
+        return "I'd be happy to recommend personalized habits based on your goals and current routines! To give you the most relevant suggestions:\n\n1. What are your main wellness or productivity goals right now?\n2. What existing habits are you most consistent with?\n3. How much time can you realistically commit each day?\n\nThis will help me suggest habits that complement your lifestyle!";
+      default:
+        return "Let's get started with improving your habits! What specifically would you like help with today?";
     }
+  };
+
+  // Save/bookmark a message
+  const handleSaveMessage = (messageId) => {
+    setMessages(messages =>
+      messages.map(msg =>
+        msg.id === messageId ? { ...msg, saved: !msg.saved } : msg
+      )
+    );
   };
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    // Try to get the user's name from localStorage first
+    const storedName = localStorage.getItem('habitharmony_user_name');
+    if (storedName) {
+      setUserName(storedName);
+      const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      setMessages([
+        { id: 1, text: `Hi ${storedName}! 👋 I'm Coach Nova, your personal habit assistant. How can I help you today?`, sender: 'ai', time: now }
+      ]);
+    } else {
+      // Fallback: Try to fetch from API if not in localStorage
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      if (token) {
+        fetch('https://habitharmony.onrender.com/api/auth/user', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        })
+          .then(res => res.json())
+          .then(data => {
+            const firstName = (data.name || '').split(' ')[0];
+            setUserName(firstName);
+            const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            setMessages([
+              { id: 1, text: `Hi ${firstName}! 👋 I'm Coach Nova, your personal habit assistant. How can I help you today?`, sender: 'ai', time: now }
+            ]);
+          })
+          .catch(err => {
+            setUserName('');
+            const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            setMessages([
+              { id: 1, text: `Hi there! 👋 I'm Coach Nova, your personal habit assistant. How can I help you today?`, sender: 'ai', time: now }
+            ]);
+          });
+      } else {
+        setUserName('');
+        const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        setMessages([
+          { id: 1, text: `Hi there! 👋 I'm Coach Nova, your personal habit assistant. How can I help you today?`, sender: 'ai', time: now }
+        ]);
+      }
+    }
+  }, []);
+
+  const habitHistory = {
+    '2024-05-01': { completed: 3, total: 3 },
+    '2024-05-02': { completed: 2, total: 3 },
+    // ...
+  };
+
+  function openDayDetails(dateStr) {
+    setSelectedDay(dateStr);
+    // Show modal or sidebar with details
+  }
 
   return (
-    <div className="flex flex-col h-screen bg-[#F8F3F3]">
-      {/* Header */}
-      <div className="flex items-center bg-[#914938] text-white p-4">
-        <button onClick={onClose} className="mr-3">
-          <ArrowLeft size={24} />
-        </button>
-        <div className="flex items-center">
-          <Bot className="mr-2" size={24} />
-          <div>
-            <h1 className="font-bold">Habit Harmony Assistant</h1>
-            <p className="text-xs opacity-80">Always here to help</p>
+    <div className="min-h-screen font-display bg-[#F8F3F3] pb-24 relative flex flex-col">
+      {/* Header - Sticky */}
+      <div className="sticky top-0 bg-[#F8F3F3] z-10 pt-6 pb-3 px-4 shadow-sm">
+        <div className="flex justify-between items-center">
+          <div className="flex items-center gap-2">
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => navigate('/homescreen')}
+              className="mr-2"
+            >
+              <ArrowLeft size={20} className="text-[#F75836]" />
+            </motion.button>
+            <MessageSquare size={20} className="text-[#F75836]" />
+            <h1 className="font-bold text-lg">AI Coach</h1>
+          </div>
+          
+          <div className="flex items-center gap-3">
+            <div className="flex items-center bg-white px-2 py-1 rounded-full border border-gray-200 shadow-sm">
+              <span className="text-sm font-medium flex items-center">
+                <MessageSquare size={14} className="text-[#F75836] mr-1" />
+                {remainingMessages} left
+              </span>
+            </div>
+            
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="relative size-10 rounded-full cursor-pointer border-2 border-[#F75836] overflow-hidden"
+            >
+              <img src={maradImg} alt="Profile" className="w-full h-full object-cover" />
+            </motion.div>
           </div>
         </div>
       </div>
-
-      {/* Messages Container */}
-      <div className="flex-1 overflow-y-auto p-4 bg-[#F8F3F3]">
-        {messages.map((message, index) => (
-          <ChatBubble key={index} message={message} isUser={message.isUser} />
-        ))}
-        <div ref={messagesEndRef} />
-      </div>
-
-      {/* Quick Options */}
-      <div className="p-2 bg-[#F8F3F3] border-t border-gray-200 overflow-x-auto">
-        <div className="flex flex-wrap">
-          {quickOptions.map((option, index) => (
-            <QuickOption key={index} text={option} onClick={handleQuickOption} />
-          ))}
-        </div>
-      </div>
-
-      {/* Input Area */}
-      <div className="p-4 border-t border-gray-200 bg-[#F8F3F3]">
-        <div className="flex items-center bg-white rounded-full px-4 py-2 border border-gray-300">
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Type a message..."
-            className="flex-1 bg-transparent outline-none"
-          />
-          <button
-            onClick={handleSend}
-            disabled={!input.trim()}
-            className={`ml-2 ${
-              !input.trim() ? "text-gray-400" : "text-[#914938]"
-            }`}
+      
+      {/* AI Usage Summary (Free Tier) */}
+      <motion.div 
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="mx-4 mt-3 bg-blue-50 rounded-xl p-3 border border-blue-100"
+      >
+        <div className="flex items-start">
+          <div className="text-blue-500 mr-3 text-xl mt-1">
+            <Bell size={18} />
+          </div>
+          <div>
+            <h3 className="font-medium text-blue-700">Free Plan: {remainingMessages}/5 coaching sessions left</h3>
+            <p className="text-sm text-blue-600 mt-1">Get unlimited coaching with Premium!</p>
+          </div>
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="ml-auto bg-[#F75836] text-white text-sm py-1 px-3 rounded-full"
           >
-            <Send size={20} />
-          </button>
+            Upgrade
+          </motion.button>
+        </div>
+      </motion.div>
+
+      {/* Main Chat Area */}
+      <div className="flex-1 px-4 pt-3 pb-20 overflow-y-auto">
+        <div className="space-y-4">
+          {messages.map((message) => (
+            <motion.div
+              key={message.id}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+              className={`flex ${message.sender === 'user' ? 'justify-end' : message.sender === 'system' ? 'justify-center' : 'justify-start'}`}
+            >
+              {message.sender === 'system' ? (
+                <div className="bg-gray-100 rounded-lg py-2 px-4 max-w-xs sm:max-w-md text-sm text-center text-gray-500">
+                  {message.text}
+                </div>
+              ) : (
+                <div className={`relative max-w-xs sm:max-w-md ${message.sender === 'user' ? 'order-2' : ''}`}>
+                  {message.sender === 'ai' && (
+                    <div className="absolute -left-10 top-1 size-8 bg-[#F75836] rounded-full flex items-center justify-center text-white text-xs font-bold">
+                      CN
+                    </div>
+                  )}
+                  
+                  <div className={`rounded-2xl p-3 ${
+                    message.sender === 'user' 
+                      ? 'bg-[#F75836] text-white rounded-tr-none' 
+                      : 'bg-white border border-gray-200 rounded-tl-none'
+                  }`}>
+                    <p className="whitespace-pre-line">{message.text}</p>
+                    <div className={`flex justify-between items-center mt-1 text-xs ${
+                      message.sender === 'user' ? 'text-white/80' : 'text-gray-500'
+                    }`}>
+                      <span>{message.time}</span>
+                      
+                      {message.sender === 'ai' && (
+                        <motion.button
+                          whileHover={{ scale: 1.2 }}
+                          whileTap={{ scale: 0.9 }}
+                          onClick={() => handleSaveMessage(message.id)}
+                          className={message.saved ? 'text-[#F75836]' : ''}
+                        >
+                          <BookmarkPlus size={16} />
+                        </motion.button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          ))}
+          
+          {/* AI Typing Indicator */}
+          {isTyping && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="flex justify-start"
+            >
+              <div className="relative max-w-xs sm:max-w-md">
+                <div className="absolute -left-10 top-1 size-8 bg-[#F75836] rounded-full flex items-center justify-center text-white text-xs font-bold">
+                  CN
+                </div>
+                <div className="rounded-2xl p-4 bg-white border border-gray-200 rounded-tl-none">
+                  <div className="flex space-x-1">
+                    <motion.div
+                      animate={{ y: [0, -5, 0] }}
+                      transition={{ repeat: Infinity, duration: 1, delay: 0 }}
+                      className="bg-gray-300 h-2 w-2 rounded-full"
+                    />
+                    <motion.div
+                      animate={{ y: [0, -5, 0] }}
+                      transition={{ repeat: Infinity, duration: 1, delay: 0.2 }}
+                      className="bg-gray-300 h-2 w-2 rounded-full"
+                    />
+                    <motion.div
+                      animate={{ y: [0, -5, 0] }}
+                      transition={{ repeat: Infinity, duration: 1, delay: 0.4 }}
+                      className="bg-gray-300 h-2 w-2 rounded-full"
+                    />
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+          
+          {/* Mood Check Prompt */}
+          <AnimatePresence>
+            {showMoodCheck && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 20 }}
+                className="flex justify-center"
+              >
+                <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm max-w-xs sm:max-w-md">
+                  <div className="flex justify-between items-center mb-3">
+                    <h3 className="font-bold text-gray-700">How are you feeling today?</h3>
+                    <motion.button
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                      onClick={() => setShowMoodCheck(false)}
+                      className="text-gray-400"
+                    >
+                      <X size={16} />
+                    </motion.button>
+                  </div>
+                  
+                  <div className="flex justify-between">
+                    {moodOptions.map((mood) => (
+                      <motion.button
+                        key={mood.label}
+                        whileHover={{ y: -2 }}
+                        whileTap={{ scale: 0.9 }}
+                        onClick={() => handleMoodSelection(mood)}
+                        className="flex flex-col items-center"
+                      >
+                        <span className="text-2xl mb-1">{mood.emoji}</span>
+                        <span className="text-xs text-gray-600">{mood.label}</span>
+                      </motion.button>
+                    ))}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+          
+          {canContinue && (
+            <div className="flex justify-center my-2">
+              <button
+                className="bg-[#F75836] text-white px-4 py-2 rounded-full shadow"
+                onClick={() => handleSendMessage('continue')}
+              >
+                Continue
+              </button>
+            </div>
+          )}
+          
+          <div ref={messagesEndRef} />
         </div>
       </div>
+      
+      {/* Quick Suggestions */}
+      {showSuggestions && (
+        <div className="mb-2 px-4 py-2">
+          <div className="flex overflow-x-auto gap-2 pb-2 no-scrollbar">
+            {suggestions.map((suggestion, index) => (
+              <motion.button
+                key={index}
+                whileHover={{ y: -2 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => handleSuggestionClick(suggestion)}
+                className="flex-shrink-0 bg-white border border-gray-200 rounded-full px-4 py-2 text-sm whitespace-nowrap shadow-sm"
+              >
+                {suggestion}
+              </motion.button>
+            ))}
+          </div>
+        </div>
+      )}
+      
+      {/* Input Area - Fixed at Bottom */}
+      <div className="fixed bottom-0 left-0 right-0 bg-[#F8F3F3] border-t border-gray-200 p-4">
+        <div className="flex items-center gap-2">
+          <div className="flex-1 relative">
+            <textarea
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+              placeholder="Message Coach Nova..."
+              className="w-full border border-gray-300 rounded-2xl py-3 px-4 pr-10 text-sm focus:outline-none focus:border-[#F75836] resize-none"
+              style={{ maxHeight: '120px', minHeight: '48px' }}
+              rows={inputText.split('\n').length > 3 ? 3 : inputText.split('\n').length}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSendMessage(inputText);
+                }
+              }}
+            />
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={() => handleSendMessage(inputText)}
+              disabled={!inputText.trim()}
+              className={`absolute right-3 top-1/2 -translate-y-1/2 ${
+                inputText.trim() ? 'text-[#F75836]' : 'text-gray-400'
+              }`}
+            >
+              <Send size={20} />
+            </motion.button>
+          </div>
+          
+          <div className="flex gap-2">
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={() => setShowMoodCheck(true)}
+              className="bg-white size-10 rounded-full flex items-center justify-center border border-gray-300 shadow-sm"
+            >
+              <Smile size={20} className="text-gray-600" />
+            </motion.button>
+            
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={() => setShowHabitTools(!showHabitTools)}
+              className="bg-[#F75836] size-10 rounded-full flex items-center justify-center shadow-sm"
+            >
+              <PlusCircle size={20} className="text-white" />
+            </motion.button>
+          </div>
+        </div>
+      </div>
+      
+      {/* Habit Assistant Tools Panel */}
+      <AnimatePresence>
+        {showHabitTools && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.5 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black z-30"
+              onClick={() => setShowHabitTools(false)}
+            />
+            
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              className="fixed bottom-0 left-0 right-0 bg-white rounded-t-2xl p-4 z-40 max-h-[70vh] overflow-y-auto"
+            >
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="font-bold text-lg">Habit Assistant Tools</h2>
+                <motion.button
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() => setShowHabitTools(false)}
+                >
+                  <X size={20} />
+                </motion.button>
+              </div>
+              
+              <div className="space-y-3">
+                {habitTools.map((tool, index) => (
+                  <motion.div
+                    key={index}
+                    whileHover={{ y: -2 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => handleSelectHabitTool(tool)}
+                    className="bg-gray-50 border border-gray-200 rounded-xl p-4 cursor-pointer"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl">{tool.icon}</span>
+                      <div>
+                        <h3 className="font-bold">{tool.title}</h3>
+                        <p className="text-sm text-gray-600 mt-1">{tool.description}</p>
+                      </div>
+                      <ChevronRight size={18} className="ml-auto text-gray-400" />
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+      
+      {/* Saved Tips Panel */}
+      <AnimatePresence>
+        {showSavedTips && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.5 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black z-30"
+              onClick={() => setShowSavedTips(false)}
+            />
+            
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              className="fixed bottom-0 left-0 right-0 bg-white rounded-t-2xl p-4 z-40 max-h-[70vh] overflow-y-auto"
+            >
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="font-bold text-lg">My Saved Tips</h2>
+                <motion.button
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() => setShowSavedTips(false)}
+                >
+                  <X size={20} />
+                </motion.button>
+              </div>
+              
+              {messages.filter(msg => msg.saved).length > 0 ? (
+                <div className="space-y-3">
+                  {messages.filter(msg => msg.saved).map((msg) => (
+                    <motion.div
+                      key={msg.id}
+                      whileHover={{ y: -2 }}
+                      whileTap={{ scale: 0.98 }}
+                      className="bg-gray-50 border border-gray-200 rounded-xl p-4"
+                    >
+                      <p className="text-sm">{msg.text}</p>
+                      <div className="flex justify-end items-center mt-2">
+                        <motion.button
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                          className="text-[#F75836]"
+                          onClick={() => handleSaveMessage(msg.id)}
+                        >
+                          <BookmarkPlus size={16} />
+                        </motion.button>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-6">
+                  <BookmarkPlus size={32} className="mx-auto text-gray-300 mb-2" />
+                  <p className="text-gray-500">No saved tips yet</p>
+                  <p className="text-sm text-gray-400 mt-1">
+                    Tap the bookmark icon on any coach message to save it
+                  </p>
+                </div>
+              )}
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+      
+      {/* Floating Action Button for Saved Tips */}
+      <motion.button
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.9 }}
+        onClick={() => setShowSavedTips(true)}
+        className="fixed bottom-36 right-4 z-20 bg-white size-12 rounded-full flex items-center justify-center shadow-lg border border-gray-200"
+      >
+        <BookmarkPlus size={22} className="text-[#F75836]" />
+      </motion.button>
     </div>
   );
-};
-
-export default ChatbotAssistant;
+}

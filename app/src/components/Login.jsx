@@ -7,7 +7,6 @@ const Login = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const [showPassword, setShowPassword] = useState(false);
-    const [staySignedIn, setStaySignedIn] = useState(false);
     const [formData, setFormData] = useState({
         email: '',
         password: ''
@@ -15,10 +14,14 @@ const Login = () => {
     const [error, setError] = useState('');
     const [checkingToken, setCheckingToken] = useState(true);
     const [isFromLogout, setIsFromLogout] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [fieldFocus, setFieldFocus] = useState({ email: false, password: false });
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
+        setIsSubmitting(true);
+        
         try {
             console.log("[Login Component] Attempting login with:", formData);
             const response = await api.login(formData);
@@ -27,39 +30,29 @@ const Login = () => {
             // Extract token correctly based on your API response structure
             let token;
             
-            // Check if token is directly in response
             if (response.token) {
                 token = response.token;
-            } 
-            // Check if token is in response.data
-            else if (response.data && response.data.token) {
+            } else if (response.data && response.data.token) {
                 token = response.data.token;
-            } 
-            // Check if response itself is the token (string)
-            else if (typeof response === 'string') {
+            } else if (typeof response === 'string') {
                 token = response;
-            }
-            // If we still don't have a token, throw an error
-            else {
+            } else {
                 console.error("[Login Component] Could not find token in response:", response);
                 throw new Error("Invalid server response - no token found");
             }
 
-            // Save token based on "stay signed in"
-            if (staySignedIn) {
-                localStorage.setItem('token', token);
-                localStorage.setItem('staySignedIn', 'true');
-                console.log("[Login Component] Token saved to localStorage");
-            } else {
-                sessionStorage.setItem('token', token);
-                localStorage.removeItem('staySignedIn');
-                console.log("[Login Component] Token saved to sessionStorage");
-            }
-
-            navigate('/homescreen');
+            // Always save to localStorage for persistence
+            localStorage.setItem('token', token);
+            
+            // Add success animation before navigating
+            setTimeout(() => {
+                navigate('/homescreen');
+            }, 500);
+            
         } catch (error) {
             console.error("[Login Component] Login failed:", error);
             setError(error.response?.data?.message || error.message || 'Invalid email or password');
+            setIsSubmitting(false);
         }
     };
 
@@ -67,17 +60,14 @@ const Login = () => {
         // Check if this login page was accessed after logout
         if (location.state && location.state.fromLogout) {
             setIsFromLogout(true);
-            // Ensure we're not checking tokens if coming from logout
             setCheckingToken(false);
             return;
         }
 
-        // Check both storage locations for tokens
-        const localToken = localStorage.getItem('token');
-        const sessionToken = sessionStorage.getItem('token');
+        // Check for token
+        const token = localStorage.getItem('token');
         
-        // Only redirect if we have a valid token
-        if (localToken || sessionToken) {
+        if (token) {
             console.log("[Login Component] Token found, navigating to /homescreen");
             navigate('/homescreen');
         } else {
@@ -87,74 +77,156 @@ const Login = () => {
     }, [navigate, location]);
 
     if (checkingToken) {
-        console.log("[Login Component] Checking token, rendering null");
-        return null; // or a loader/spinner
+        return (
+            <div className="fixed inset-0 flex items-center justify-center bg-white">
+                <div className="w-12 h-12 border-4 border-gray-200 border-t-[#914938] rounded-full animate-spin"></div>
+            </div>
+        );
     }
 
     const handleBack = () => {
-        // Always navigate to the Intro.jsx page
         navigate('/');
     };
 
+    const handleFocus = (field) => {
+        setFieldFocus({ ...fieldFocus, [field]: true });
+    };
+
+    const handleBlur = (field) => {
+        setFieldFocus({ ...fieldFocus, [field]: false });
+    };
+
+    const handleGoogleLogin = () => {
+        // This would typically call your Google OAuth implementation
+        console.log("Google login clicked - implementation needed");
+        // Example: window.location.href = '/api/auth/google';
+    };
+
     return (
-        <div className='flex flex-col'>
-            <div className='flex py-4 px-2 items-center gap-18'>
-                <ChevronLeft size='40' onClick={handleBack} className="cursor-pointer" />
-                <h1 className='text-2xl font-semibold'>Login</h1>
+        <div className='flex flex-col min-h-screen bg-white'>
+            {/* Header */}
+            <div className='flex items-center px-4 py-4 border-b border-gray-100'>
+                <button 
+                    onClick={handleBack}
+                    className='p-2 -ml-2 rounded-full hover:bg-gray-100 active:bg-gray-200 transition-colors duration-200'
+                >
+                    <ChevronLeft size={28} className="text-gray-800" />
+                </button>
+                <h1 className='ml-3 text-xl font-bold text-gray-800'>Login</h1>
             </div>
-            <br />
-            <div className='flex flex-col gap-8 py-4 px-12 w-screen'>
-                <div>
-                    <p className='text-[10px] font-bold'>EMAIL</p>
-                    <input
-                        type="email"
-                        value={formData.email}
-                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                        className='py-2 border-b border-black/50 focus:border-green-400 outline-none text-sm font-semibold w-full'
-                        placeholder='Email address'
-                    />
-                </div>
-                <div>
-                    <p className='text-[10px] font-bold'>PASSWORD</p>
-                    <div className="relative">
-                        <input
-                            type={showPassword ? 'text' : 'password'}
-                            value={formData.password}
-                            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                            className='py-2 border-b border-black/50 focus:border-green-400 outline-none text-sm font-semibold w-full'
-                            placeholder='Enter password'
-                        />
-                        <button
-                            type="button"
-                            onClick={() => setShowPassword(!showPassword)}
-                            className="absolute right-2 top-1/2 transform -translate-y-1/2"
-                        >
-                            {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                        </button>
+            
+            {/* Form */}
+            <form onSubmit={handleSubmit} className='flex flex-col flex-grow px-6 pt-6'>
+                <div className='space-y-5 mb-6'>
+                    <div className={`transition-all duration-200 ${fieldFocus.email ? 'translate-y-[-4px]' : ''}`}>
+                        <p className='text-xs font-semibold text-gray-500 mb-1'>EMAIL</p>
+                        <div className={`relative border-b-2 ${fieldFocus.email ? 'border-[#914938]' : 'border-gray-200'} transition-colors duration-200`}>
+                            <input
+                                type="email"
+                                value={formData.email}
+                                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                onFocus={() => handleFocus('email')}
+                                onBlur={() => handleBlur('email')}
+                                className='py-2 w-full outline-none text-base text-gray-800 font-medium'
+                                placeholder='Email address'
+                                required
+                            />
+                        </div>
+                    </div>
+                    
+                    <div className={`transition-all duration-200 ${fieldFocus.password ? 'translate-y-[-4px]' : ''}`}>
+                        <p className='text-xs font-semibold text-gray-500 mb-1'>PASSWORD</p>
+                        <div className={`relative border-b-2 ${fieldFocus.password ? 'border-[#914938]' : 'border-gray-200'} transition-colors duration-200`}>
+                            <input
+                                type={showPassword ? 'text' : 'password'}
+                                value={formData.password}
+                                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                                onFocus={() => handleFocus('password')}
+                                onBlur={() => handleBlur('password')}
+                                className='py-2 w-full outline-none text-base text-gray-800 font-medium pr-10'
+                                placeholder='Enter password'
+                                required
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="absolute right-0 top-1/2 transform -translate-y-1/2 p-2 text-gray-500"
+                            >
+                                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                            </button>
+                        </div>
                     </div>
                 </div>
-                <div className="flex items-center gap-2">
-                    <input
-                        type="checkbox"
-                        id="staySignedIn"
-                        checked={staySignedIn}
-                        onChange={() => setStaySignedIn(!staySignedIn)}
-                        className="w-4 h-4"
-                    />
-                    <label htmlFor="staySignedIn" className="text-sm font-medium">Stay signed in</label>
-                </div>
+
+                <p className="text-sm text-[#914938] font-medium self-end mb-8">Forgot password?</p>
+                
                 {error && (
-                    <p className='text-red-500 text-sm text-center'>{error}</p>
+                    <div className='py-3 px-4 bg-red-50 rounded-lg mb-6'>
+                        <p className='text-red-600 text-sm'>{error}</p>
+                    </div>
                 )}
-            </div>
-            <div className='items-center flex flex-col mt-[60%] gap-2'>
-                <button
-                    onClick={handleSubmit}
-                    className='py-4 px-32 bg-[#914938] text-white rounded-4xl font-bold text-xl'
-                >
-                    Login
-                </button>
-            </div>
+
+                <div className='mt-auto mb-8 space-y-4'>
+                    <button
+                        type="submit"
+                        disabled={isSubmitting}
+                        className={`w-full py-4 rounded-full font-bold text-lg text-white shadow-md transition-all duration-300 overflow-hidden relative
+                            ${isSubmitting ? 'bg-gray-400' : 'bg-[#914938] hover:bg-[#7d3e30] active:scale-[0.98]'}`}
+                    >
+                        <span className={`inline-block transition-all duration-300 ${isSubmitting ? 'opacity-0' : 'opacity-100'}`}>
+                            Login
+                        </span>
+                        {isSubmitting && (
+                            <span className="absolute inset-0 flex items-center justify-center">
+                                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                            </span>
+                        )}
+                    </button>
+                    
+                    <div className="relative flex items-center">
+                        <div className="flex-grow border-t border-gray-300"></div>
+                        <span className="flex-shrink mx-4 text-gray-500 text-sm">or</span>
+                        <div className="flex-grow border-t border-gray-300"></div>
+                    </div>
+                    
+                    <button
+                        type="button"
+                        onClick={handleGoogleLogin}
+                        className="w-full py-3.5 rounded-full border border-gray-300 flex items-center justify-center gap-3 font-medium text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-colors duration-200"
+                    >
+                        <svg width="20" height="20" viewBox="0 0 20 20">
+                            <path
+                                d="M19.8 10.2c0-.63-.06-1.25-.16-1.86H10v3.52h5.52a4.7 4.7 0 01-2.05 3.12v2.6h3.32c1.95-1.8 3.07-4.45 3.07-7.38z"
+                                fill="#4285F4"
+                            />
+                            <path
+                                d="M10 20c2.77 0 5.1-.92 6.8-2.48l-3.32-2.6c-.92.62-2.1.98-3.48.98-2.66 0-4.92-1.8-5.72-4.22H.85v2.68A10 10 0 0010 20z"
+                                fill="#34A853"
+                            />
+                            <path
+                                d="M4.28 11.68A6 6 0 014 10c0-.58.1-1.15.28-1.68V5.64H.85A10 10 0 000 10c0 1.6.3 3.14.85 4.5l3.43-2.82z"
+                                fill="#FBBC05"
+                            />
+                            <path
+                                d="M10 3.98c1.5 0 2.84.52 3.9 1.54l2.95-2.95C15.16.97 12.84 0 10 0A10 10 0 00.85 5.64l3.43 2.68C5.08 5.8 7.34 3.98 10 3.98z"
+                                fill="#EA4335"
+                            />
+                        </svg>
+                        Continue with Google
+                    </button>
+                    
+                    <p className='text-center text-gray-600'>
+                        Don't have an account?{' '}
+                        <button 
+                            type="button"
+                            onClick={() => navigate('/signup')}
+                            className='text-[#914938] font-medium'
+                        >
+                            Sign up
+                        </button>
+                    </p>
+                </div>
+            </form>
         </div>
     );
 };

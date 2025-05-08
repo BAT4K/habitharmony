@@ -1,7 +1,7 @@
 import React from "react";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import Login from './components/Login';  // Update this import path
-import Signup from "./pages/Signup";
+import ModernSignup from './components/ModernSignup';
 import HomeScreen from "./pages/HomeScreen";
 import Intro from "./pages/Intro";
 import Auth from "./pages/Auth";
@@ -26,7 +26,7 @@ const AppContent = () => {
         <Route path="/" element={<Intro />} />
         <Route path="/auth" element={<Auth />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/signup" element={<Signup />} />
+        <Route path="/signup" element={<ModernSignup />} />
         <Route path="/homescreen" element={<HomeScreen />} />
         <Route path="/calendar" element={<CalendarPage />} />
         <Route path="/earning" element={<BadgePage />} />
