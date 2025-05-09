@@ -5,23 +5,13 @@ require('dotenv').config();
 
 const app = express();
 
-// Correct CORS setup
-const allowedOrigins = [
-    'http://localhost:5173', // Local dev
-    'https://habitharmony.vercel.app' // Deployed frontend
-];
-
+// CORS setup
 app.use(cors({
-    origin: function (origin, callback) {
-        if (!origin || allowedOrigins.includes(origin)) {
-            callback(null, true);
-        } else {
-            callback(new Error('Not allowed by CORS'));
-        }
-    },
-    credentials: true
+    origin: true, // Allow all origins in development
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
 }));
-
 
 app.use(express.json());
 
@@ -32,8 +22,88 @@ mongoose.connect(process.env.MONGODB_URI)
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));
-const paymentRoutes = require('./routes/payment');
-app.use('/api/payment', paymentRoutes);
+// Temporarily comment out payment routes
+// const paymentRoutes = require('./routes/payment');
+// app.use('/api/payment', paymentRoutes);
+
+// Health check endpoint
+app.get('/api/health', async (req, res) => {
+    try {
+        const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434';
+        const ollamaResponse = await fetch(`${OLLAMA_URL}/api/tags`);
+        
+        if (!ollamaResponse.ok) {
+            throw new Error('Ollama service is not responding');
+        }
+        
+        res.json({ 
+            status: 'healthy',
+            ollama: 'connected',
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        console.error('Health check failed:', error);
+        res.status(503).json({ 
+            status: 'unhealthy',
+            ollama: 'disconnected',
+            error: error.message,
+            timestamp: new Date().toISOString()
+        });
+    }
+});
+
+// Chatbot endpoint
+app.post('/api/chat', async (req, res) => {
+    try {
+        const { messages, stream } = req.body;
+        
+        // Get Ollama URL from environment variable or use default
+        const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434';
+        
+        // Forward the request to Ollama API
+        const ollamaResponse = await fetch(`${OLLAMA_URL}/api/chat`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                model: "phi3:mini",
+                messages: messages,
+                stream: stream || false
+            }),
+        });
+
+        if (!ollamaResponse.ok) {
+            const errorData = await ollamaResponse.text();
+            console.error('Ollama API error:', errorData);
+            throw new Error(`Failed to get response from Ollama: ${ollamaResponse.status} ${ollamaResponse.statusText}`);
+        }
+
+        // If streaming is requested, pipe the response
+        if (stream) {
+            res.setHeader('Content-Type', 'text/event-stream');
+            res.setHeader('Cache-Control', 'no-cache');
+            res.setHeader('Connection', 'keep-alive');
+            
+            ollamaResponse.body.pipe(res);
+            
+            // Handle client disconnect
+            req.on('close', () => {
+                ollamaResponse.body.destroy();
+            });
+        } else {
+            const data = await ollamaResponse.json();
+            res.json(data);
+        }
+    } catch (error) {
+        console.error('Chatbot error:', error);
+        res.status(500).json({ 
+            error: 'Failed to get AI response',
+            message: error.message,
+            details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
+    }
+});
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {

@@ -176,6 +176,14 @@ const ProfilePage = () => {
     }
   }, []);
 
+  // Add a function to get the dynamic remaining messages from localStorage
+  function getDynamicRemainingMessages() {
+    const premium = localStorage.getItem('habitharmony_premium') === 'true';
+    if (premium) return Infinity;
+    const remaining = localStorage.getItem('habitharmony_remaining_messages');
+    return remaining !== null ? parseInt(remaining, 10) : 10;
+  }
+
   // Premium modal component
   const PremiumModal = () => (
     <motion.div
@@ -229,7 +237,7 @@ const ProfilePage = () => {
           </button>
         </div>
         <div className="mt-4 text-xs text-gray-500 text-center">
-          {`Free users: ${getRemainingMessages()}/${UPGRADE_MESSAGE_LIMIT} AI messages left today`}
+          {`Free users: ${getDynamicRemainingMessages()}/10 AI messages left`}
         </div>
       </motion.div>
     </motion.div>
@@ -455,8 +463,8 @@ const ProfilePage = () => {
               </div>
               <p className="text-sm text-gray-500 mt-2">
                 {isPremium 
-                  ? 'Enjoy all premium features!' 
-                  : '7 AI messages left today'}
+                  ? 'Enjoy all premium features!'
+                  : `${getDynamicRemainingMessages()}/10 AI messages left`}
               </p>
             </div>
             {!isPremium && (
@@ -503,10 +511,14 @@ const ProfilePage = () => {
           <AnimatePresence>
             {expandedSection === 'notifications' && (
               <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.3 }}
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ 
+                  duration: 0.25,
+                  ease: [0.4, 0, 0.2, 1],
+                  opacity: { duration: 0.2 }
+                }}
                 className="px-4 pb-4"
               >
                 <div className="flex items-center justify-between py-2 border-t border-gray-100">
@@ -518,7 +530,7 @@ const ProfilePage = () => {
                     <motion.div 
                       className="w-4 h-4 bg-white rounded-full shadow"
                       animate={{ x: notificationsEnabled ? 24 : 0 }}
-                      transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                      transition={{ type: 'spring', stiffness: 500, damping: 30 }}
                     />
                   </div>
                 </div>
@@ -569,10 +581,14 @@ const ProfilePage = () => {
           <AnimatePresence>
             {expandedSection === 'appearance' && (
               <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.3 }}
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ 
+                  duration: 0.25,
+                  ease: [0.4, 0, 0.2, 1],
+                  opacity: { duration: 0.2 }
+                }}
                 className="px-4 pb-4"
               >
                 <div className="flex items-center justify-between py-2 border-t border-gray-100">
@@ -584,7 +600,7 @@ const ProfilePage = () => {
                     <motion.div 
                       className="w-4 h-4 bg-white rounded-full shadow"
                       animate={{ x: currentTheme === 'dark' ? 24 : 0 }}
-                      transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                      transition={{ type: 'spring', stiffness: 500, damping: 30 }}
                     />
                   </div>
                 </div>
@@ -619,10 +635,14 @@ const ProfilePage = () => {
           <AnimatePresence>
             {expandedSection === 'privacy' && (
               <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.3 }}
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ 
+                  duration: 0.25,
+                  ease: [0.4, 0, 0.2, 1],
+                  opacity: { duration: 0.2 }
+                }}
                 className="px-4 pb-4"
               >
                 <div className="flex items-center justify-between py-2 border-t border-gray-100">
@@ -634,7 +654,7 @@ const ProfilePage = () => {
                     <motion.div 
                       className="w-4 h-4 bg-white rounded-full shadow"
                       animate={{ x: isProfilePublic ? 24 : 0 }}
-                      transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                      transition={{ type: 'spring', stiffness: 500, damping: 30 }}
                     />
                   </div>
                 </div>

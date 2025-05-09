@@ -165,7 +165,7 @@ const predefinedHabits = [
   { name: "Coding", icon: "💻", unit: "min", target: 45 }
 ];
 
-const getTodayStr = () => new Date().toISOString().slice(0, 10);
+const getTodayStr = () => new Date().toLocaleDateString('en-CA');
 
 const HomeScreen = () => {
   const [currentReminderIndex, setCurrentReminderIndex] = useState(0);
@@ -182,9 +182,13 @@ const HomeScreen = () => {
   const [selectedDay, setSelectedDay] = useState(null);
   const [habits, setHabits] = useState(() => {
     const stored = localStorage.getItem('habitharmony_user_habits');
-    if (stored) return JSON.parse(stored).map(h => ({ ...h, completed: false, streak: 0 }));
-    // fallback to default habitsData if not present
-    return habitsData.map(h => ({ ...h, completed: false }));
+    let habitsArr = stored ? JSON.parse(stored).map(h => ({ ...h, completed: false, streak: 0 })) : habitsData.map(h => ({ ...h, completed: false }));
+    // Load today's completed habits from calendar history
+    const calendarHistory = JSON.parse(localStorage.getItem(CALENDAR_HISTORY_KEY) || '{}');
+    const today = getTodayStr();
+    const completedIds = calendarHistory[today] || [];
+    habitsArr = habitsArr.map(h => ({ ...h, completed: completedIds.includes(h.id) }));
+    return habitsArr;
   });
   const [habitModal, setHabitModal] = useState({ open: false, habit: null });
   const [habitProgress, setHabitProgress] = useState(0);
@@ -395,6 +399,14 @@ const HomeScreen = () => {
       setShowCelebration(true);
       setTimeout(() => setShowCelebration(false), 2000);
     }
+
+    // Persist completed state for today in calendar history
+    const completedHabits = updatedHabits.filter(h => h.completed).map(h => h.id);
+    setCalendarHistory(prev => {
+      const updated = { ...prev, [today]: completedHabits };
+      localStorage.setItem(CALENDAR_HISTORY_KEY, JSON.stringify(updated));
+      return updated;
+    });
   }
 
   // Add predefined habit
@@ -565,7 +577,7 @@ const HomeScreen = () => {
 
   // Update calendar history when habits are ticked/unticked
   useEffect(() => {
-    const today = new Date().toLocaleDateString('en-CA');
+    const today = getTodayStr();
     const completedHabits = habits.filter(h => h.completed).map(h => h.id);
     setCalendarHistory(prev => {
       const updated = { ...prev, [today]: completedHabits };
@@ -666,7 +678,7 @@ const HomeScreen = () => {
             onClick={() => setShowEditHabits(true)}
             aria-label="Edit habits"
           >
-            <Pencil size={16} />
+            <Edit size={16} />
           </button>
         </div>
         {habits.map(habit => (

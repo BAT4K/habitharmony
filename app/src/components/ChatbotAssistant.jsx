@@ -10,7 +10,7 @@ import api from '../services/api';
 import maradImg from '../assets/marad.png';
 
 // API configuration
-const OLLAMA_API_URL = "http://localhost:11434/api/chat";
+const OLLAMA_API_URL = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api/chat` : "https://habitharmony.onrender.com/api/chat";
 
 // Rate limiting configuration
 const RATE_LIMIT = {
@@ -346,6 +346,83 @@ function loadRazorpayScript() {
   });
 }
 
+// Add a function to generate personalized suggestions
+function getPersonalizedSuggestions({ userName, habitData, currentMood, messages }) {
+  const hour = new Date().getHours();
+  const timeGreeting = hour < 12
+    ? "morning"
+    : hour < 18
+      ? "afternoon"
+      : "evening";
+
+  const streak = parseInt(habitData?.streak || 0, 10);
+  const favoriteHabit = habitData?.mostConsistentHabit || null;
+  const lastUserMessage = messages.slice().reverse().find(m => m.sender === 'user');
+  const lastAImessage = messages.slice().reverse().find(m => m.sender === 'ai');
+
+  // Advanced: streak history (simulate with current streak and best streak)
+  const bestStreak = parseInt(habitData?.bestStreak || 0, 10);
+  const streakImprovement = streak > 0 && bestStreak > 0 ? streak - bestStreak : 0;
+
+  // Advanced: time since last message
+  let timeSinceLastUserMsg = null;
+  if (lastUserMessage && lastUserMessage.time) {
+    const now = new Date();
+    const [h, m] = lastUserMessage.time.split(':');
+    const lastMsgDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m);
+    timeSinceLastUserMsg = Math.floor((now - lastMsgDate) / 60000); // in minutes
+  }
+
+  // Custom suggestion templates
+  const templates = [
+    streak > 0 && streakImprovement > 0 ? `You're improving your streak! Up by ${streakImprovement} days from your best.` : null,
+    bestStreak > 0 ? `Your best streak ever is ${bestStreak} days. Want to beat it?` : null,
+    timeSinceLastUserMsg && timeSinceLastUserMsg > 60 ? `It's been a while since your last check-in. Want a fresh start?` : null,
+    favoriteHabit ? `Let's make progress on your "${favoriteHabit}" habit today!` : null,
+    streak > 0 && streak % 7 === 0 ? `Congrats! You've hit a ${streak}-day milestone! Want to celebrate?` : null,
+    hour < 12 ? "What's one thing you want to accomplish this morning?" : null,
+    hour >= 12 && hour < 18 ? "How's your day going? Need an afternoon boost?" : null,
+    hour >= 18 ? "Ready to reflect on your day or plan for tomorrow?" : null,
+    currentMood && currentMood.label === 'Happy' ? "Share your happiness—what's going well?" : null,
+    currentMood && currentMood.label === 'Sad' ? "Would a gratitude exercise help today?" : null,
+    currentMood && currentMood.label === 'Tired' ? "Try a micro-habit to keep momentum with low energy." : null,
+    lastUserMessage && lastUserMessage.text.length > 20 ? "Want to break that down into a smaller step?" : null,
+    lastAImessage && lastAImessage.text && lastAImessage.text.length > 40 ? "Summarize my last advice in one sentence." : null,
+    "Ask for a science-backed habit tip",
+    "Show me a quick win for today",
+    "What's a tiny habit I can try now?",
+    "Remind me why consistency matters"
+  ].filter(Boolean);
+
+  // Mood-based suggestions (keep from previous logic)
+  let suggestions = [];
+  if (currentMood) {
+    if (currentMood.label === 'Tired') {
+      suggestions.push("Want a low-energy habit idea?");
+      suggestions.push("Need a quick energy boost tip?");
+    } else if (currentMood.label === 'Happy') {
+      suggestions.push("Channel your happy mood into a new habit!");
+      suggestions.push("Want to celebrate your progress?");
+    } else if (currentMood.label === 'Sad') {
+      suggestions.push("Would a gentle self-care habit help?");
+      suggestions.push("Need a mood-lifting suggestion?");
+    } else if (currentMood.label === 'Frustrated') {
+      suggestions.push("Want a tip to overcome frustration?");
+      suggestions.push("Break down a big goal into small steps?");
+    } else if (currentMood.label === 'Neutral') {
+      suggestions.push("Ready for a simple win today?");
+      suggestions.push("Want a random habit tip?");
+    }
+  }
+
+  // Add custom templates and general suggestions
+  suggestions = suggestions.concat(templates);
+
+  // Remove duplicates and shuffle
+  suggestions = Array.from(new Set(suggestions)).sort(() => 0.5 - Math.random()).slice(0, 4);
+  return suggestions;
+}
+
 // Main AI Coach Component
 export default function AICoach({ onBack }) {
   const [messages, setMessages] = useState([]);
@@ -353,10 +430,14 @@ export default function AICoach({ onBack }) {
   const [isTyping, setIsTyping] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(true);
   const [currentMood, setCurrentMood] = useState(null);
-  const [remainingMessages, setRemainingMessages] = useState(5); // For free tier users
+  const [remainingMessages, setRemainingMessages] = useState(() => {
+    const stored = localStorage.getItem('habitharmony_remaining_messages');
+    return stored !== null ? parseInt(stored, 10) : 10;
+  });
   const [showMoodCheck, setShowMoodCheck] = useState(false);
   const [showHabitTools, setShowHabitTools] = useState(false);
   const [showSavedTips, setShowSavedTips] = useState(false);
+  const [showLimitReachedModal, setShowLimitReachedModal] = useState(false); // New state for limit reached modal
   const messagesEndRef = useRef(null);
   const navigate = useNavigate();
   const [userName, setUserName] = useState('');
@@ -377,15 +458,6 @@ export default function AICoach({ onBack }) {
     { id: 3, text: "Habit stacking works by connecting new habits to existing routines", tag: "Routine", saved: true },
   ];
 
-  // Mock suggestions based on user context
-  const suggestions = [
-    "Suggest a morning routine",
-    "I broke my streak. What now?",
-    "I feel demotivated today",
-    "How can I build consistency?",
-    "Tips for breaking bad habits"
-  ];
-
   // Mock habit tool options
   const habitTools = [
     { title: "Build a New Habit", icon: "➕", description: "Create a sustainable new habit with personalized guidance" },
@@ -403,6 +475,11 @@ export default function AICoach({ onBack }) {
     { emoji: "😴", label: "Tired" }
   ];
 
+  // Add an effect to persist remainingMessages to localStorage
+  useEffect(() => {
+    localStorage.setItem('habitharmony_remaining_messages', remainingMessages);
+  }, [remainingMessages]);
+
   // Auto-scroll to bottom of messages
   useEffect(() => {
     scrollToBottom();
@@ -417,7 +494,8 @@ export default function AICoach({ onBack }) {
     try {
       const habitData = getUserHabitData();
       const systemPrompt = `
-You are Coach Nova, a helpful and friendly habit and wellness assistant.
+You are Coach Nova, the AI coach for Habit Harmony, a habit tracking and wellness app.
+Always refer to the app as Habit Harmony and never mention any other company or app name.
 Here is the user's habit data:
 - Current streak: ${habitData.streak}
 - Best streak: ${habitData.bestStreak}
@@ -469,7 +547,8 @@ Answer user questions clearly and conversationally, using this data when relevan
   const getAIResponseStream = async (text, onChunk) => {
     const habitData = getUserHabitData();
     const systemPrompt = `
-You are Coach Nova, a helpful and friendly habit and wellness assistant.
+You are Coach Nova, the AI coach for Habit Harmony, a habit tracking and wellness app.
+Always refer to the app as Habit Harmony and never mention any other company or app name.
 Here is the user's habit data:
 - Current streak: ${habitData.streak}
 - Best streak: ${habitData.bestStreak}
@@ -490,51 +569,64 @@ Answer user questions clearly and conversationally, using this data when relevan
 `;
 
     const response = await fetch(OLLAMA_API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "phi3:mini",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: text }
-        ],
-        stream: true,
-        flush: true
-      }),
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            model: "phi3:mini",
+            messages: [
+                { role: "system", content: systemPrompt },
+                { role: "user", content: text }
+            ],
+            stream: true
+        }),
     });
 
     if (!response.body) throw new Error("No response body");
 
     // Use TextDecoderStream for modern browsers
     const stream = response.body
-      .pipeThrough(new TextDecoderStream());
+        .pipeThrough(new TextDecoderStream());
     const reader = stream.getReader();
 
     let fullText = "";
     while (true) {
-      const { value, done } = await reader.read();
-      if (done) break;
-      for (const line of value.split('\n')) {
-        if (line.trim()) {
-          try {
-            const data = JSON.parse(line);
-            const token = data.message?.content || "";
-            if (token) {
-              fullText += token;
-              onChunk(fullText);
+        const { value, done } = await reader.read();
+        if (done) break;
+        
+        // Split by newlines and process each line
+        const lines = value.split('\n');
+        for (const line of lines) {
+            if (line.trim()) {
+                try {
+                    const data = JSON.parse(line);
+                    const token = data.message?.content || "";
+                    if (token) {
+                        fullText += token;
+                        onChunk(fullText);
+                    }
+                } catch (e) {
+                    // If it's not JSON, it might be a direct token
+                    if (line.trim()) {
+                        fullText += line.trim();
+                        onChunk(fullText);
+                    }
+                }
             }
-          } catch (e) {
-            // Ignore parse errors for incomplete lines
-          }
         }
-      }
     }
     return fullText;
-  };
+};
 
-  // In handleSendMessage, ensure onChunk updates the last AI message's text
+  // Modify handleSendMessage to check message limit
   const handleSendMessage = async (text) => {
     if (!text.trim()) return;
+    
+    // Check if user has reached message limit
+    if (remainingMessages <= 0 && !premium) {
+      setShowLimitReachedModal(true);
+      return;
+    }
+
     setInputText("");
     // Add user message
     const userMessage = {
@@ -545,6 +637,7 @@ Answer user questions clearly and conversationally, using this data when relevan
     };
     setMessages(prev => [...prev, userMessage]);
     setIsTyping(true);
+    setSuggestions(getPersonalizedSuggestions({ userName, habitData: getUserHabitData(), currentMood, messages: [...messages, userMessage] }));
 
     // Add a placeholder AI message with isStreaming
     const aiMessageId = messages.length + 2;
@@ -579,14 +672,19 @@ Answer user questions clearly and conversationally, using this data when relevan
       });
 
       // Update remaining messages for free users
-      if (remainingMessages > 0) {
+      if (!premium && remainingMessages > 0) {
         setRemainingMessages(prev => prev - 1);
       }
 
-      // Occasionally show mood check (20% chance)
-      if (Math.random() < 0.2 && !showMoodCheck) {
+      // Show upgrade prompt when 2 messages remaining
+      if (!premium && remainingMessages === 2) {
         setTimeout(() => {
-          setShowMoodCheck(true);
+          setMessages(prev => [...prev, {
+            id: messages.length + 3,
+            text: "You have 2 messages remaining. Upgrade to Premium for unlimited coaching!",
+            sender: 'system',
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          }]);
         }, 1000);
       }
 
@@ -615,6 +713,7 @@ Answer user questions clearly and conversationally, using this data when relevan
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
     setMessages(prev => [...prev, newMessage]);
+    setSuggestions(getPersonalizedSuggestions({ userName, habitData: getUserHabitData(), currentMood, messages: [...messages, newMessage] }));
     const aiResponse = await getAIResponse(suggestion);
     const cleanedResponse = cleanAIResponse(suggestion, aiResponse);
     const aiMessage = {
@@ -741,6 +840,7 @@ Answer user questions clearly and conversationally, using this data when relevan
     const storedName = localStorage.getItem('habitharmony_user_name');
     // Update last visit timestamp
     localStorage.setItem('habitharmony_last_visit', Date.now().toString());
+    
     if (storedName) {
       setUserName(storedName);
       const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -756,16 +856,24 @@ Answer user questions clearly and conversationally, using this data when relevan
             'Authorization': `Bearer ${token}`
           }
         })
-          .then(res => res.json())
+          .then(res => {
+            if (!res.ok) {
+              throw new Error('Failed to fetch user data');
+            }
+            return res.json();
+          })
           .then(data => {
             const firstName = (data.name || '').split(' ')[0];
             setUserName(firstName);
+            localStorage.setItem('habitharmony_user_name', firstName);
             const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             setMessages([
               { id: 1, text: getAdvancedPersonalizedGreeting(firstName), sender: 'ai', time: now }
             ]);
           })
           .catch(err => {
+            console.warn('Error fetching user data:', err);
+            // Fallback to anonymous greeting
             setUserName('');
             const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             setMessages([
@@ -960,6 +1068,9 @@ Answer user questions clearly and conversationally, using this data when relevan
     rzp.open();
   };
 
+  const habitData = getUserHabitData();
+  const suggestions = getPersonalizedSuggestions({ userName, habitData, currentMood, messages });
+
   return (
     <div className="min-h-screen font-display bg-[#F8F3F3] pb-24 relative flex flex-col">
       {/* Header - Sticky */}
@@ -969,7 +1080,7 @@ Answer user questions clearly and conversationally, using this data when relevan
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              onClick={() => navigate('/homescreen')}
+              onClick={() => navigate(-1)} // Go back to previous page
               className="mr-2"
             >
               <ArrowLeft size={20} className="text-[#F75836]" />
@@ -1014,7 +1125,7 @@ Answer user questions clearly and conversationally, using this data when relevan
                   <Award size={16} className="inline-block" /> Premium Member
                 </span>
               ) : (
-                <>Free Plan: {remainingMessages}/5 coaching sessions left</>
+                <>Free Plan: {remainingMessages}/10 coaching sessions left</>
               )}
             </h3>
             <p className="text-sm text-blue-600 mt-1">
@@ -1159,6 +1270,56 @@ Answer user questions clearly and conversationally, using this data when relevan
               )}
             </motion.div>
           </>
+        )}
+      </AnimatePresence>
+
+      {/* Limit Reached Modal */}
+      <AnimatePresence>
+        {showLimitReachedModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center"
+          >
+            <div className="fixed inset-0 bg-black opacity-40" onClick={() => setShowLimitReachedModal(false)} />
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="relative bg-white rounded-xl p-6 z-50 max-w-md w-full mx-4 shadow-lg"
+            >
+              <div className="text-center">
+                <div className="text-4xl mb-4">🎯</div>
+                <h2 className="text-xl font-bold mb-2">Message Limit Reached</h2>
+                <p className="text-gray-600 mb-6">
+                  You've used all your free messages. Upgrade to Premium for unlimited coaching and exclusive features!
+                </p>
+                <div className="space-y-3">
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => {
+                      setShowLimitReachedModal(false);
+                      setShowUpgradeModal(true);
+                      setUpgradeStep('plans');
+                    }}
+                    className="w-full bg-[#F75836] text-white py-3 rounded-xl font-semibold"
+                  >
+                    Upgrade to Premium
+                  </motion.button>
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => setShowLimitReachedModal(false)}
+                    className="w-full border border-gray-300 py-3 rounded-xl font-semibold"
+                  >
+                    Maybe Later
+                  </motion.button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
         )}
       </AnimatePresence>
 

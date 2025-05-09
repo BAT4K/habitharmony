@@ -11,12 +11,13 @@ import ProfilePage from "./pages/ProfilePage";
 import SettingsPage from "./pages/SettingsPage";
 import AssistantPage from "./pages/AssistantPage"; // Add this import
 import Navbar from "./components/Navbar";
+import FriendsScreen from "./pages/FriendsScreen";
 
 const AppContent = () => {
   const location = useLocation();
 
   // Update the array to exclude assistant page from showing navbar
-  const showNavbar = ["/homescreen", "/calendar", "/profile"].includes(
+  const showNavbar = ["/homescreen", "/calendar", "/profile", "/friends"].includes(
     location.pathname
   );
 
@@ -32,7 +33,8 @@ const AppContent = () => {
         <Route path="/earning" element={<BadgePage />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/settings" element={<SettingsPage />} />
-        <Route path="/assistant" element={<AssistantPage />} /> {/* Add this route */}
+        <Route path="/assistant" element={<AssistantPage />} />
+        <Route path="/friends" element={<FriendsScreen />} />
       </Routes>
 
       {showNavbar && <Navbar />}
