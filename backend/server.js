@@ -30,12 +30,33 @@ app.use('/api/auth', require('./routes/auth'));
 app.get('/api/health', async (req, res) => {
     try {
         // Use a public Ollama API endpoint
-        const OLLAMA_URL = process.env.OLLAMA_URL || 'https://ollama.ai/api';
-        const ollamaResponse = await fetch(`${OLLAMA_URL}/tags`);
+        const OLLAMA_URL = process.env.OLLAMA_URL || 'https://api.ollama.com/v1';
+        console.log('Attempting to connect to Ollama at:', OLLAMA_URL);
+        
+        // Try to get a simple response from the API
+        const ollamaResponse = await fetch(`${OLLAMA_URL}/chat`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                model: "phi3:mini",
+                messages: [{ role: "user", content: "test" }],
+                stream: false
+            }),
+        });
+        
+        console.log('Ollama response status:', ollamaResponse.status);
+        console.log('Ollama response headers:', JSON.stringify(Object.fromEntries(ollamaResponse.headers)));
         
         if (!ollamaResponse.ok) {
-            throw new Error('Ollama service is not responding');
+            const errorText = await ollamaResponse.text();
+            console.error('Ollama error response:', errorText);
+            throw new Error(`Ollama service returned status ${ollamaResponse.status}: ${errorText}`);
         }
+        
+        const responseData = await ollamaResponse.json();
+        console.log('Ollama response data:', JSON.stringify(responseData));
         
         res.json({ 
             status: 'healthy',
@@ -44,6 +65,7 @@ app.get('/api/health', async (req, res) => {
         });
     } catch (error) {
         console.error('Health check failed:', error);
+        console.error('Error stack:', error.stack);
         res.status(503).json({ 
             status: 'unhealthy',
             ollama: 'disconnected',
@@ -59,7 +81,7 @@ app.post('/api/chat', async (req, res) => {
         const { messages, stream } = req.body;
         
         // Use a public Ollama API endpoint
-        const OLLAMA_URL = process.env.OLLAMA_URL || 'https://ollama.ai/api';
+        const OLLAMA_URL = process.env.OLLAMA_URL || 'https://api.ollama.com/v1';
         
         // Forward the request to Ollama API
         const ollamaResponse = await fetch(`${OLLAMA_URL}/chat`, {

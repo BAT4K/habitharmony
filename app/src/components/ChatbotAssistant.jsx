@@ -395,50 +395,55 @@ function getPersonalizedSuggestions({ userName, habitData, currentMood, messages
   ].filter(Boolean);
 
   // Mood-based suggestions (keep from previous logic)
-  let suggestions = [];
-  if (currentMood) {
-    if (currentMood.label === 'Tired') {
-      suggestions.push("Want a low-energy habit idea?");
-      suggestions.push("Need a quick energy boost tip?");
-    } else if (currentMood.label === 'Happy') {
-      suggestions.push("Channel your happy mood into a new habit!");
-      suggestions.push("Want to celebrate your progress?");
-    } else if (currentMood.label === 'Sad') {
-      suggestions.push("Would a gentle self-care habit help?");
-      suggestions.push("Need a mood-lifting suggestion?");
-    } else if (currentMood.label === 'Frustrated') {
-      suggestions.push("Want a tip to overcome frustration?");
-      suggestions.push("Break down a big goal into small steps?");
-    } else if (currentMood.label === 'Neutral') {
-      suggestions.push("Ready for a simple win today?");
-      suggestions.push("Want a random habit tip?");
-    }
+  let moodSuggestions = [];
+  
+  if (currentMood === 'tired') {
+    moodSuggestions.push("Want a low-energy habit idea?");
+    moodSuggestions.push("Need a quick energy boost tip?");
+  } else if (currentMood === 'happy') {
+    moodSuggestions.push("Channel your happy mood into a new habit!");
+    moodSuggestions.push("Want to celebrate your progress?");
+  } else if (currentMood === 'sad') {
+    moodSuggestions.push("Would a gentle self-care habit help?");
+    moodSuggestions.push("Need a mood-lifting suggestion?");
+  } else if (currentMood === 'frustrated') {
+    moodSuggestions.push("Want a tip to overcome frustration?");
+    moodSuggestions.push("Break down a big goal into small steps?");
+  } else {
+    moodSuggestions.push("Ready for a simple win today?");
+    moodSuggestions.push("Want a random habit tip?");
   }
 
   // Add custom templates and general suggestions
-  suggestions = suggestions.concat(templates);
-
-  // Remove duplicates and shuffle
-  suggestions = Array.from(new Set(suggestions)).sort(() => 0.5 - Math.random()).slice(0, 4);
-  return suggestions;
+  moodSuggestions = moodSuggestions.concat(templates);
+  
+  // Remove duplicates and randomize
+  moodSuggestions = Array.from(new Set(moodSuggestions)).sort(() => 0.5 - Math.random()).slice(0, 4);
+  return moodSuggestions;
 }
 
 // Main AI Coach Component
 export default function AICoach({ onBack }) {
+  const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([]);
-  const [inputText, setInputText] = useState('');
+  const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [suggestions, setSuggestions] = useState([
+      "How can I improve my habits?",
+      "What's my current streak?",
+      "Show me my recent progress",
+      "Give me some motivation"
+  ]);
+  const messagesEndRef = useRef(null);
   const [isTyping, setIsTyping] = useState(false);
+  const [currentMessage, setCurrentMessage] = useState('');
+  const [isStreaming, setIsStreaming] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(true);
   const [currentMood, setCurrentMood] = useState(null);
-  const [remainingMessages, setRemainingMessages] = useState(() => {
-    const stored = localStorage.getItem('habitharmony_remaining_messages');
-    return stored !== null ? parseInt(stored, 10) : 10;
-  });
-  const [showMoodCheck, setShowMoodCheck] = useState(false);
+  const [showMoodSelector, setShowMoodSelector] = useState(false);
   const [showHabitTools, setShowHabitTools] = useState(false);
   const [showSavedTips, setShowSavedTips] = useState(false);
-  const [showLimitReachedModal, setShowLimitReachedModal] = useState(false); // New state for limit reached modal
-  const messagesEndRef = useRef(null);
+  const [showLimitReachedModal, setShowLimitReachedModal] = useState(false);
   const navigate = useNavigate();
   const [userName, setUserName] = useState('');
   const [selectedDay, setSelectedDay] = useState(null);
@@ -627,7 +632,7 @@ Answer user questions clearly and conversationally, using this data when relevan
       return;
     }
 
-    setInputText("");
+    setInput("");
     // Add user message
     const userMessage = {
       id: messages.length + 1,
@@ -704,33 +709,25 @@ Answer user questions clearly and conversationally, using this data when relevan
 
   // Handle quick suggestion clicks
   const handleSuggestionClick = async (suggestion) => {
-    setShowSuggestions(false);
-    setIsTyping(true);
-    const newMessage = {
-      id: messages.length + 1,
-      text: suggestion,
-      sender: 'user',
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    };
-    setMessages(prev => [...prev, newMessage]);
-    setSuggestions(getPersonalizedSuggestions({ userName, habitData: getUserHabitData(), currentMood, messages: [...messages, newMessage] }));
-    const aiResponse = await getAIResponse(suggestion);
-    const cleanedResponse = cleanAIResponse(suggestion, aiResponse);
-    const aiMessage = {
-      id: messages.length + 2,
-      text: cleanedResponse,
-      sender: 'ai',
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    };
-    setMessages(prev => [...prev, aiMessage]);
-    setIsTyping(false);
-    setShowSuggestions(true);
+    setInput(suggestion);
+    await handleSendMessage(suggestion);
+    // Remove the clicked suggestion and add a new one
+    setSuggestions(prev => {
+        const filtered = prev.filter(s => s !== suggestion);
+        const newSuggestions = [
+            "How can I improve my habits?",
+            "What's my current streak?",
+            "Show me my recent progress",
+            "Give me some motivation"
+        ].filter(s => !filtered.includes(s));
+        return [...filtered, newSuggestions[0]];
+    });
   };
 
   // Handle mood selection
   const handleMoodSelection = (mood) => {
     setCurrentMood(mood);
-    setShowMoodCheck(false);
+    setShowMoodSelector(false);
     
     // Add mood as a system message
     const moodMessage = {
@@ -1069,7 +1066,10 @@ Answer user questions clearly and conversationally, using this data when relevan
   };
 
   const habitData = getUserHabitData();
-  const suggestions = getPersonalizedSuggestions({ userName, habitData, currentMood, messages });
+  useEffect(() => {
+    const personalizedSuggestions = getPersonalizedSuggestions({ userName, habitData, currentMood, messages });
+    setSuggestions(personalizedSuggestions);
+  }, [messages, currentMood, userName, habitData]);
 
   return (
     <div className="min-h-screen font-display bg-[#F8F3F3] pb-24 relative flex flex-col">
@@ -1376,7 +1376,7 @@ Answer user questions clearly and conversationally, using this data when relevan
           
           {/* Mood Check Prompt */}
           <AnimatePresence>
-            {showMoodCheck && (
+            {showMoodSelector && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -1389,7 +1389,7 @@ Answer user questions clearly and conversationally, using this data when relevan
                     <motion.button
                       whileHover={{ scale: 1.1 }}
                       whileTap={{ scale: 0.9 }}
-                      onClick={() => setShowMoodCheck(false)}
+                      onClick={() => setShowMoodSelector(false)}
                       className="text-gray-400"
                     >
                       <X size={16} />
@@ -1487,26 +1487,26 @@ Answer user questions clearly and conversationally, using this data when relevan
         <div className="flex items-center gap-2">
           <div className="flex-1 relative">
             <textarea
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
               placeholder="Message Coach Nova..."
               className="w-full border border-gray-300 rounded-2xl py-3 px-4 pr-10 text-sm focus:outline-none focus:border-[#F75836] resize-none"
               style={{ maxHeight: '120px', minHeight: '48px' }}
-              rows={inputText.split('\n').length > 3 ? 3 : inputText.split('\n').length}
+              rows={input.split('\n').length > 3 ? 3 : input.split('\n').length}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
-                  handleSendMessage(inputText);
+                  handleSendMessage(input);
                 }
               }}
             />
             <motion.button
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
-              onClick={() => handleSendMessage(inputText)}
-              disabled={!inputText.trim()}
+              onClick={() => handleSendMessage(input)}
+              disabled={!input.trim()}
               className={`absolute right-3 top-1/2 -translate-y-1/2 ${
-                inputText.trim() ? 'text-[#F75836]' : 'text-gray-400'
+                input.trim() ? 'text-[#F75836]' : 'text-gray-400'
               }`}
             >
               <Send size={20} />
@@ -1517,7 +1517,7 @@ Answer user questions clearly and conversationally, using this data when relevan
             <motion.button
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
-              onClick={() => setShowMoodCheck(true)}
+              onClick={() => setShowMoodSelector(true)}
               className="bg-white size-10 rounded-full flex items-center justify-center border border-gray-300 shadow-sm"
             >
               <Smile size={20} className="text-gray-600" />
