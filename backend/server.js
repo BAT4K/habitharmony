@@ -29,8 +29,9 @@ app.use('/api/auth', require('./routes/auth'));
 // Health check endpoint
 app.get('/api/health', async (req, res) => {
     try {
-        const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434';
-        const ollamaResponse = await fetch(`${OLLAMA_URL}/api/tags`);
+        // Use a public Ollama API endpoint
+        const OLLAMA_URL = process.env.OLLAMA_URL || 'https://ollama.ai/api';
+        const ollamaResponse = await fetch(`${OLLAMA_URL}/tags`);
         
         if (!ollamaResponse.ok) {
             throw new Error('Ollama service is not responding');
@@ -57,11 +58,11 @@ app.post('/api/chat', async (req, res) => {
     try {
         const { messages, stream } = req.body;
         
-        // Get Ollama URL from environment variable or use default
-        const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434';
+        // Use a public Ollama API endpoint
+        const OLLAMA_URL = process.env.OLLAMA_URL || 'https://ollama.ai/api';
         
         // Forward the request to Ollama API
-        const ollamaResponse = await fetch(`${OLLAMA_URL}/api/chat`, {
+        const ollamaResponse = await fetch(`${OLLAMA_URL}/chat`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
