@@ -21,7 +21,7 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     setUser(null);
     localStorage.removeItem('habitharmony_user');
-    localStorage.removeItem('habitharmony_token');
+    localStorage.removeItem('token');
   };
 
   return (

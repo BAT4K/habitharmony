@@ -305,80 +305,36 @@ const FriendsScreen = () => {
     switch (tab) {
       case 'friends':
         return (
-          <div className="space-y-4">
-            {requests.length > 0 && (
-              <div className="bg-white rounded-lg p-4 shadow">
-                <h3 className="font-semibold mb-2">Friend Requests</h3>
-                <div className="space-y-2">
-                  {requests.map((request) => (
-                    <div
-                      key={request._id}
-                      className="flex items-center justify-between"
-                    >
-                      <div>
-                        <p className="font-medium">
-                          {request.fromUser.name} {request.fromUser.surname}
-                        </p>
-                        <p className="text-sm text-gray-600">
-                          {request.fromUser.email}
-                        </p>
-                      </div>
-                      <div className="flex space-x-2">
-                        <button
-                          onClick={() => acceptRequest(request._id)}
-                          className="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600"
-                        >
-                          Accept
-                        </button>
-                        <button
-                          onClick={() => rejectRequest(request._id)}
-                          className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
-                        >
-                          Reject
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="space-y-6">
+            <h2 className="text-lg font-bold text-gray-800 mb-2">Your Friends</h2>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {friends.length === 0 && (
+                <p className="text-gray-500">No friends yet. Add some!</p>
+              )}
               {friends.map((friend) => (
                 <div
                   key={friend._id}
-                  className="bg-white rounded-lg p-4 shadow cursor-pointer hover:shadow-md transition-shadow"
+                  className="flex items-center bg-white rounded-2xl shadow p-4 space-x-4 hover:bg-blue-50 transition cursor-pointer"
                   onClick={() => handleFriendClick(friend)}
                 >
-                  <div className="flex items-center space-x-3">
-                    <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center">
-                      <span className="text-xl font-semibold">
-                        {friend.name[0]}
-                      </span>
-                    </div>
-                    <div>
-                      <h3 className="font-semibold">
-                        {friend.name} {friend.surname}
-                      </h3>
-                      <p className="text-sm text-gray-600">
-                        {friend.email}
-                      </p>
-                    </div>
+                  <div className="flex-shrink-0 w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-2xl font-bold text-blue-500">
+                    {/* Avatar fallback: initials */}
+                    {friend.avatar ? (
+                      <img src={friend.avatar} alt={friend.name} className="w-12 h-12 rounded-full object-cover" />
+                    ) : (
+                      `${friend.name?.[0] || ''}${friend.surname?.[0] || ''}`
+                    )}
                   </div>
-                  <div className="mt-4 grid grid-cols-2 gap-2">
-                    <div className="bg-gray-50 p-2 rounded">
-                      <p className="text-xs text-gray-600">Points</p>
-                      <p className="font-semibold">
-                        {friend.points || 0}
-                      </p>
-                    </div>
-                    <div className="bg-gray-50 p-2 rounded">
-                      <p className="text-xs text-gray-600">Streak</p>
-                      <p className="font-semibold">
-                        {friend.streak || 0} days
-                      </p>
-                    </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-gray-900 truncate">{friend.name} {friend.surname}</p>
+                    <p className="text-sm text-gray-500 truncate">{friend.email}</p>
                   </div>
+                  <button
+                    className="ml-2 bg-blue-500 text-white rounded-full px-4 py-2 text-sm font-medium shadow hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    onClick={e => { e.stopPropagation(); handleFriendClick(friend); }}
+                  >
+                    View
+                  </button>
                 </div>
               ))}
             </div>
@@ -387,51 +343,60 @@ const FriendsScreen = () => {
 
       case 'challenges':
         return (
-          <div className="space-y-4">
-            <button
-              onClick={() => {
-                // Create challenge logic
-              }}
-              className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-            >
-              Create Challenge
-            </button>
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-lg font-bold text-gray-800">Active Challenges</h2>
+              <button
+                onClick={() => {/* Create challenge logic */}}
+                className="bg-blue-500 text-white px-4 py-2 rounded-full text-sm font-medium shadow hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400 flex items-center gap-2"
+              >
+                <Plus size={16} />
+                New Challenge
+              </button>
+            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {challenges.map((challenge) => (
-                <div
-                  key={challenge._id}
-                  className="bg-white rounded-lg p-4 shadow"
-                >
-                  <h3 className="font-semibold mb-2">{challenge.title}</h3>
-                  <p className="text-gray-600 mb-4">{challenge.description}</p>
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span>Progress</span>
-                      <span>
-                        {challenge.participants.find(
-                          (p) => p.user === user?.id
-                        )?.progress || 0}{' '}
-                        / {challenge.goal} {challenge.unit}
-                      </span>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {challenges.length === 0 ? (
+                <p className="text-gray-500">No active challenges. Create one!</p>
+              ) : (
+                challenges.map((challenge) => (
+                  <div
+                    key={challenge._id}
+                    className="bg-white rounded-2xl p-4 shadow hover:shadow-md transition"
+                  >
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-xl">
+                        {challenge.icon || "🎯"}
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-gray-900">{challenge.title}</h3>
+                        <p className="text-sm text-gray-600">{challenge.daysLeft} days left</p>
+                      </div>
                     </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div
-                        className="bg-blue-500 h-2 rounded-full"
-                        style={{
-                          width: `${
-                            ((challenge.participants.find(
-                              (p) => p.user === user?.id
-                            )?.progress || 0) /
-                              challenge.goal) *
-                            100
-                          }%`
-                        }}
-                      ></div>
+                    
+                    <div className="space-y-3">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">Progress</span>
+                        <span className="font-medium text-gray-900">
+                          {challenge.participants.find(p => p.user === user?.id)?.progress || 0} / {challenge.goal} {challenge.unit}
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div
+                          className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                          style={{
+                            width: `${((challenge.participants.find(p => p.user === user?.id)?.progress || 0) / challenge.goal) * 100}%`
+                          }}
+                        />
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <Users size={16} />
+                        <span>{challenge.participants.length} participants</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
         );
@@ -439,127 +404,117 @@ const FriendsScreen = () => {
       case 'leaderboard':
         return (
           <div className="space-y-6">
-            <div>
-              <h3 className="font-semibold mb-4">Global Leaderboard</h3>
-              <div className="bg-white rounded-lg shadow overflow-hidden">
-                {globalLeaderboard.map((entry, index) => (
-                  <div
-                    key={entry._id}
-                    className="flex items-center p-4 border-b last:border-b-0"
-                  >
-                    <div className="w-8 text-center font-semibold">
-                      {index + 1}
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-medium">
-                        {entry.user.name} {entry.user.surname}
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        {entry.points} points
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-semibold">
-                        {entry.streak} days
-                      </p>
-                      <p className="text-sm text-gray-600">streak</p>
-                    </div>
+            <h2 className="text-lg font-bold text-gray-800">Global Leaderboard</h2>
+            <div className="bg-white rounded-2xl shadow overflow-hidden">
+              {globalLeaderboard.map((entry, index) => (
+                <div
+                  key={entry._id}
+                  className={`flex items-center p-4 ${
+                    index !== globalLeaderboard.length - 1 ? 'border-b border-gray-100' : ''
+                  }`}
+                >
+                  <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-sm font-bold text-blue-500 mr-3">
+                    {index + 1}
                   </div>
-                ))}
-              </div>
+                  <div className="flex-1">
+                    <p className="font-medium text-gray-900">
+                      {entry.user.name} {entry.user.surname}
+                    </p>
+                    <p className="text-sm text-gray-600">{entry.points} points</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-semibold text-gray-900">{entry.streak} days</p>
+                    <p className="text-sm text-gray-600">streak</p>
+                  </div>
+                </div>
+              ))}
             </div>
 
-            <div>
-              <h3 className="font-semibold mb-4">Friends Leaderboard</h3>
-              <div className="bg-white rounded-lg shadow overflow-hidden">
-                {friendsLeaderboard.map((entry, index) => (
-                  <div
-                    key={entry._id}
-                    className="flex items-center p-4 border-b last:border-b-0"
-                  >
-                    <div className="w-8 text-center font-semibold">
-                      {index + 1}
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-medium">
-                        {entry.user.name} {entry.user.surname}
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        {entry.points} points
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-semibold">
-                        {entry.streak} days
-                      </p>
-                      <p className="text-sm text-gray-600">streak</p>
-                    </div>
+            <h2 className="text-lg font-bold text-gray-800 mt-8">Friends Leaderboard</h2>
+            <div className="bg-white rounded-2xl shadow overflow-hidden">
+              {friendsLeaderboard.map((entry, index) => (
+                <div
+                  key={entry._id}
+                  className={`flex items-center p-4 ${
+                    index !== friendsLeaderboard.length - 1 ? 'border-b border-gray-100' : ''
+                  }`}
+                >
+                  <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-sm font-bold text-blue-500 mr-3">
+                    {index + 1}
                   </div>
-                ))}
-              </div>
+                  <div className="flex-1">
+                    <p className="font-medium text-gray-900">
+                      {entry.user.name} {entry.user.surname}
+                    </p>
+                    <p className="text-sm text-gray-600">{entry.points} points</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-semibold text-gray-900">{entry.streak} days</p>
+                    <p className="text-sm text-gray-600">streak</p>
+                  </div>
+                </div>
+              ))}
             </div>
 
-            <div>
-              <h3 className="font-semibold mb-4">Your Achievements</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {achievements.map((achievement) => (
-                  <div
-                    key={achievement.type}
-                    className="bg-white rounded-lg p-4 shadow"
-                  >
-                    <h4 className="font-semibold mb-2">
-                      {achievement.name}
-                    </h4>
-                    <p className="text-sm text-gray-600">
-                      {achievement.description}
-                    </p>
-                    <p className="text-xs text-gray-500 mt-2">
-                      Unlocked{' '}
-                      {formatDistanceToNow(
-                        new Date(achievement.unlockedAt),
-                        { addSuffix: true }
-                      )}
-                    </p>
+            <h2 className="text-lg font-bold text-gray-800 mt-8">Your Achievements</h2>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {achievements.map((achievement) => (
+                <div
+                  key={achievement.type}
+                  className="bg-white rounded-2xl p-4 shadow hover:shadow-md transition"
+                >
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-xl">
+                      {achievement.icon || "🏆"}
+                    </div>
+                    <h4 className="font-semibold text-gray-900">{achievement.name}</h4>
                   </div>
-                ))}
-              </div>
+                  <p className="text-sm text-gray-600 mb-2">{achievement.description}</p>
+                  <p className="text-xs text-gray-500">
+                    Unlocked {formatDistanceToNow(new Date(achievement.unlockedAt), { addSuffix: true })}
+                  </p>
+                </div>
+              ))}
             </div>
           </div>
         );
 
       case 'add':
         return (
-          <div className="space-y-4">
-            <div className="bg-white rounded-lg p-4 shadow">
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search users by name or email..."
-                className="w-full border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-
+          <div className="space-y-6">
+            <h2 className="text-lg font-bold text-gray-800 mb-2">Add a Friend</h2>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder="Search by name or email..."
+              className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-blue-400 focus:outline-none mb-4 shadow-sm"
+            />
             {searchResults.length > 0 && (
-              <div className="bg-white rounded-lg p-4 shadow">
-                <h3 className="font-semibold mb-2">Search Results</h3>
-                <div className="space-y-2">
+              <div className="bg-white rounded-2xl p-4 shadow">
+                <h3 className="font-semibold mb-2 text-gray-800">Search Results</h3>
+                <div className="space-y-3">
                   {searchResults.map((user) => (
                     <div
                       key={user._id}
-                      className="flex items-center justify-between"
+                      className="flex items-center justify-between bg-gray-50 rounded-xl p-3"
                     >
-                      <div>
-                        <p className="font-medium">
-                          {user.name} {user.surname}
-                        </p>
-                        <p className="text-sm text-gray-600">
-                          {user.email}
-                        </p>
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-lg font-bold text-blue-500">
+                          {user.avatar ? (
+                            <img src={user.avatar} alt={user.name} className="w-10 h-10 rounded-full object-cover" />
+                          ) : (
+                            `${user.name?.[0] || ''}${user.surname?.[0] || ''}`
+                          )}
+                        </div>
+                        <div>
+                          <p className="font-medium text-gray-900">{user.name} {user.surname}</p>
+                          <p className="text-sm text-gray-600">{user.email}</p>
+                        </div>
                       </div>
                       <button
                         onClick={() => sendRequest(user._id)}
-                        className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
+                        className="bg-blue-500 text-white px-4 py-2 rounded-full text-sm font-medium shadow hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400"
                       >
                         Add Friend
                       </button>
