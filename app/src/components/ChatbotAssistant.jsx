@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import maradImg from '../assets/marad.png';
+import ReactMarkdown from 'react-markdown';
 
 // Robust helper to normalize API base URL (removes trailing /api or /)
 function getApiBaseUrl() {
@@ -510,11 +511,29 @@ export default function AICoach({ onBack }) {
   // Function to get AI response from Gemini
   const getAIResponse = async (text) => {
     try {
+      const habitData = getUserHabitData();
+      const systemPrompt = `
+You are Coach Nova, the AI coach for Habit Harmony, a habit tracking and wellness app.
+Here is the user's habit data:
+- Current streak: ${habitData.streak}
+- Best streak: ${habitData.bestStreak}
+- Points: ${habitData.points}
+- Most consistent habit: ${habitData.mostConsistentHabit || 'N/A'}
+- Habits: ${habitData.habits.map(h => h.name).join(', ') || 'None'}
+- Last completed habit: ${habitData.lastCompletedHabit || 'N/A'}
+- Total completions (all time): ${habitData.totalCompletionsAllTime}
+- Average completions per week: ${habitData.avgCompletionsPerWeek}
+- Missed habits this week: ${Object.keys(habitData.missedThisWeek).join(', ') || 'None'}
+`;
+
       const response = await fetch(`${API_BASE_URL}/api/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          messages: [{ role: 'user', content: text }]
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: text }
+          ]
         }),
       });
 
@@ -1192,7 +1211,11 @@ export default function AICoach({ onBack }) {
                       ? 'bg-[#F75836] text-white rounded-tr-none' 
                       : 'bg-white border border-gray-200 rounded-tl-none'
                   }`}>
-                    <p className="whitespace-pre-line">{message.text}</p>
+                    {message.sender === 'ai' ? (
+                      <ReactMarkdown className="whitespace-pre-line">{message.text}</ReactMarkdown>
+                    ) : (
+                      <p className="whitespace-pre-line">{message.text}</p>
+                    )}
                     <div className={`flex justify-between items-center mt-1 text-xs ${
                       message.sender === 'user' ? 'text-white/80' : 'text-gray-500'
                     }`}>
