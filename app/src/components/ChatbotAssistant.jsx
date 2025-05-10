@@ -428,6 +428,11 @@ export default function AICoach({ onBack }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [remainingMessages, setRemainingMessages] = useState(() => {
+    // Initialize from localStorage or default to 10 for free users
+    const stored = localStorage.getItem('habitharmony_remaining_messages');
+    return stored ? parseInt(stored, 10) : 10;
+  });
   const [suggestions, setSuggestions] = useState([
       "How can I improve my habits?",
       "What's my current streak?",
@@ -623,87 +628,75 @@ Answer user questions clearly and conversationally, using this data when relevan
 };
 
   // Modify handleSendMessage to check message limit
-  const handleSendMessage = async (text) => {
-    if (!text.trim()) return;
-    
-    // Check if user has reached message limit
-    if (remainingMessages <= 0 && !premium) {
-      setShowLimitReachedModal(true);
-      return;
-    }
+  const handleSendMessage = async (e) => {
+    e.preventDefault();
+    if (!input.trim() || isLoading || remainingMessages <= 0) return;
 
-    setInput("");
-    // Add user message
-    const userMessage = {
-      id: messages.length + 1,
-      text: text,
-      sender: 'user',
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    };
-    setMessages(prev => [...prev, userMessage]);
-    setIsTyping(true);
-    setSuggestions(getPersonalizedSuggestions({ userName, habitData: getUserHabitData(), currentMood, messages: [...messages, userMessage] }));
-
-    // Add a placeholder AI message with isStreaming
-    const aiMessageId = messages.length + 2;
-    setMessages(prev => [...prev, {
-      id: aiMessageId,
-      text: "",
-      sender: 'ai',
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      isStreaming: true
-    }]);
+    const userMessage = input.trim();
+    setInput('');
+    setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
+    setIsLoading(true);
 
     try {
-      await getAIResponseStream(text, (currentText) => {
-        setMessages(prev => {
-          const updated = [...prev];
-          const idx = updated.findIndex(m => m.id === aiMessageId);
-          if (idx !== -1) {
-            updated[idx] = { ...updated[idx], text: currentText };
+      const response = await fetch('http://localhost:5000/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: userMessage,
+          stream: true
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to get response');
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let assistantMessage = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value);
+        const lines = chunk.split('\n').filter(line => line.trim());
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = JSON.parse(line.slice(6));
+            if (data.response) {
+              assistantMessage += data.response;
+              setMessages(prev => {
+                const newMessages = [...prev];
+                const lastMessage = newMessages[newMessages.length - 1];
+                if (lastMessage && lastMessage.role === 'assistant') {
+                  lastMessage.content = assistantMessage;
+                } else {
+                  newMessages.push({ role: 'assistant', content: assistantMessage });
+                }
+                return newMessages;
+              });
+            }
           }
-          return updated;
-        });
-      });
-
-      // Remove isStreaming flag when done
-      setMessages(prev => {
-        const updated = [...prev];
-        const idx = updated.findIndex(m => m.id === aiMessageId);
-        if (idx !== -1) {
-          updated[idx] = { ...updated[idx], isStreaming: false };
         }
-        return updated;
-      });
-
-      // Update remaining messages for free users
-      if (!premium && remainingMessages > 0) {
-        setRemainingMessages(prev => prev - 1);
       }
 
-      // Show upgrade prompt when 2 messages remaining
-      if (!premium && remainingMessages === 2) {
-        setTimeout(() => {
-          setMessages(prev => [...prev, {
-            id: messages.length + 3,
-            text: "You have 2 messages remaining. Upgrade to Premium for unlimited coaching!",
-            sender: 'system',
-            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-          }]);
-        }, 1000);
-      }
+      // Update remaining messages count
+      const newRemaining = remainingMessages - 1;
+      setRemainingMessages(newRemaining);
+      localStorage.setItem('habitharmony_remaining_messages', newRemaining.toString());
 
-      setCanContinue(false);
     } catch (error) {
-      console.error('Error in handleSendMessage:', error);
-      setMessages(prev => [...prev, {
-        id: messages.length + 3,
-        text: "I'm sorry, I encountered an error. Please try again.",
-        sender: 'ai',
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      console.error('Error:', error);
+      setMessages(prev => [...prev, { 
+        role: 'assistant', 
+        content: 'Sorry, I encountered an error. Please try again later.' 
       }]);
     } finally {
-      setIsTyping(false);
+      setIsLoading(false);
     }
   };
 
