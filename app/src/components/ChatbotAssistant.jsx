@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   MessageSquare, BookmarkPlus, Send, Smile, PlusCircle, 
   ArrowUp, ChevronRight, X, Award, MoreHorizontal, ChevronDown,
@@ -434,10 +434,10 @@ export default function AICoach({ onBack }) {
     return stored ? parseInt(stored, 10) : 10;
   });
   const [suggestions, setSuggestions] = useState([
-      "How can I improve my habits?",
-      "What's my current streak?",
-      "Show me my recent progress",
-      "Give me some motivation"
+    "How can I improve my habits?",
+    "What's my current streak?",
+    "Show me my recent progress",
+    "Give me some motivation"
   ]);
   const messagesEndRef = useRef(null);
   const [isTyping, setIsTyping] = useState(false);
@@ -628,13 +628,13 @@ Answer user questions clearly and conversationally, using this data when relevan
 };
 
   // Modify handleSendMessage to check message limit
-  const handleSendMessage = async (e) => {
-    e.preventDefault();
-    if (!input.trim() || isLoading || remainingMessages <= 0) return;
+  const handleSendMessage = async (input) => {
+    // Handle both event and direct text input
+    const messageText = typeof input === 'string' ? input : input.target?.value || '';
+    if (!messageText.trim() || isLoading || remainingMessages <= 0) return;
 
-    const userMessage = input.trim();
     setInput('');
-    setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
+    setMessages(prev => [...prev, { role: 'user', content: messageText }]);
     setIsLoading(true);
 
     try {
@@ -644,7 +644,7 @@ Answer user questions clearly and conversationally, using this data when relevan
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          message: userMessage,
+          message: messageText,
           stream: true
         }),
       });
@@ -689,6 +689,9 @@ Answer user questions clearly and conversationally, using this data when relevan
       setRemainingMessages(newRemaining);
       localStorage.setItem('habitharmony_remaining_messages', newRemaining.toString());
 
+      // Update suggestions after successful message
+      setTimeout(updateSuggestions, 500);
+
     } catch (error) {
       console.error('Error:', error);
       setMessages(prev => [...prev, { 
@@ -700,21 +703,42 @@ Answer user questions clearly and conversationally, using this data when relevan
     }
   };
 
+  // Update the onKeyDown handler in the textarea
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage(input);
+    }
+  };
+
+  // Add this function to update suggestions
+  const updateSuggestions = useCallback(() => {
+    const newSuggestions = getPersonalizedSuggestions({ 
+      userName, 
+      habitData: getUserHabitData(), 
+      currentMood, 
+      messages 
+    });
+    setSuggestions(prev => {
+      // Only update if there are significant changes
+      if (JSON.stringify(prev) !== JSON.stringify(newSuggestions)) {
+        return newSuggestions;
+      }
+      return prev;
+    });
+  }, [userName, currentMood, messages]);
+
+  // Update the useEffect for suggestions
+  useEffect(() => {
+    const timeoutId = setTimeout(updateSuggestions, 1000); // Debounce for 1 second
+    return () => clearTimeout(timeoutId);
+  }, [updateSuggestions]);
+
   // Handle quick suggestion clicks
   const handleSuggestionClick = async (suggestion) => {
     setInput(suggestion);
     await handleSendMessage(suggestion);
-    // Remove the clicked suggestion and add a new one
-    setSuggestions(prev => {
-        const filtered = prev.filter(s => s !== suggestion);
-        const newSuggestions = [
-            "How can I improve my habits?",
-            "What's my current streak?",
-            "Show me my recent progress",
-            "Give me some motivation"
-        ].filter(s => !filtered.includes(s));
-        return [...filtered, newSuggestions[0]];
-    });
+    // Don't update suggestions here - it will be handled by the useEffect
   };
 
   // Handle mood selection
@@ -1486,12 +1510,7 @@ Answer user questions clearly and conversationally, using this data when relevan
               className="w-full border border-gray-300 rounded-2xl py-3 px-4 pr-10 text-sm focus:outline-none focus:border-[#F75836] resize-none"
               style={{ maxHeight: '120px', minHeight: '48px' }}
               rows={input.split('\n').length > 3 ? 3 : input.split('\n').length}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSendMessage(input);
-                }
-              }}
+              onKeyDown={handleKeyDown}
             />
             <motion.button
               whileHover={{ scale: 1.1 }}
