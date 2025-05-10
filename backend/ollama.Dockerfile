@@ -10,8 +10,9 @@ RUN apt-get update && apt-get install -y \
 # Install Ollama
 RUN curl -fsSL https://ollama.com/install.sh | sh
 
-# Create health check server
-RUN echo 'from flask import Flask; app = Flask(__name__); @app.route("/api/health"); def health(): return {"status": "healthy", "ollama": "running"}; if __name__ == "__main__": app.run(host="0.0.0.0", port=5000)' > /app/health.py
+# Create app directory and health check server
+RUN mkdir -p /app && \
+    echo 'from flask import Flask; app = Flask(__name__); @app.route("/api/health"); def health(): return {"status": "healthy", "ollama": "running"}; if __name__ == "__main__": app.run(host="0.0.0.0", port=5000)' > /app/health.py
 
 # Install Flask
 RUN pip3 install flask
