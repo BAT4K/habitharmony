@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+import apiInstance from '../services/api';
 
 export const useFriends = () => {
     const [friends, setFriends] = useState([]);
@@ -13,14 +12,10 @@ export const useFriends = () => {
     const fetchFriends = async () => {
         try {
             setLoading(true);
-            const response = await fetch(`${API_URL}/friends`, {
-                credentials: 'include'
-            });
-            if (!response.ok) throw new Error('Failed to fetch friends');
-            const data = await response.json();
-            setFriends(data.friends);
+            const response = await apiInstance.get('/friends');
+            setFriends(response.data.friends);
         } catch (err) {
-            setError(err.message);
+            setError(err.message || err.response?.data?.message || 'Failed to fetch friends');
         } finally {
             setLoading(false);
         }
@@ -30,14 +25,10 @@ export const useFriends = () => {
     const fetchRequests = async () => {
         try {
             setLoading(true);
-            const response = await fetch(`${API_URL}/friends/requests`, {
-                credentials: 'include'
-            });
-            if (!response.ok) throw new Error('Failed to fetch requests');
-            const data = await response.json();
-            setRequests(data.requests);
+            const response = await apiInstance.get('/friends/requests');
+            setRequests(response.data.requests);
         } catch (err) {
-            setError(err.message);
+            setError(err.message || err.response?.data?.message || 'Failed to fetch requests');
         } finally {
             setLoading(false);
         }
@@ -51,14 +42,10 @@ export const useFriends = () => {
         }
         try {
             setLoading(true);
-            const response = await fetch(`${API_URL}/friends/search?q=${encodeURIComponent(query)}`, {
-                credentials: 'include'
-            });
-            if (!response.ok) throw new Error('Failed to search users');
-            const data = await response.json();
-            setSearchResults(data.users);
+            const response = await apiInstance.get(`/friends/search?q=${encodeURIComponent(query)}`);
+            setSearchResults(response.data.users);
         } catch (err) {
-            setError(err.message);
+            setError(err.message || err.response?.data?.message || 'Failed to search users');
         } finally {
             setLoading(false);
         }
@@ -68,17 +55,11 @@ export const useFriends = () => {
     const sendRequest = async (toUserId) => {
         try {
             setLoading(true);
-            const response = await fetch(`${API_URL}/friends/request`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify({ toUserId })
-            });
-            if (!response.ok) throw new Error('Failed to send request');
+            await apiInstance.post('/friends/request', { toUserId });
             await fetchRequests(); // Refresh requests
             return true;
         } catch (err) {
-            setError(err.message);
+            setError(err.message || err.response?.data?.message || 'Failed to send request');
             return false;
         } finally {
             setLoading(false);
@@ -89,17 +70,11 @@ export const useFriends = () => {
     const acceptRequest = async (requestId) => {
         try {
             setLoading(true);
-            const response = await fetch(`${API_URL}/friends/accept`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify({ requestId })
-            });
-            if (!response.ok) throw new Error('Failed to accept request');
+            await apiInstance.post('/friends/accept', { requestId });
             await Promise.all([fetchFriends(), fetchRequests()]); // Refresh both lists
             return true;
         } catch (err) {
-            setError(err.message);
+            setError(err.message || err.response?.data?.message || 'Failed to accept request');
             return false;
         } finally {
             setLoading(false);
@@ -110,17 +85,11 @@ export const useFriends = () => {
     const rejectRequest = async (requestId) => {
         try {
             setLoading(true);
-            const response = await fetch(`${API_URL}/friends/reject`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify({ requestId })
-            });
-            if (!response.ok) throw new Error('Failed to reject request');
+            await apiInstance.post('/friends/reject', { requestId });
             await fetchRequests(); // Refresh requests
             return true;
         } catch (err) {
-            setError(err.message);
+            setError(err.message || err.response?.data?.message || 'Failed to reject request');
             return false;
         } finally {
             setLoading(false);

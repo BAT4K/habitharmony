@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+import apiInstance from '../services/api';
 
 export const useLeaderboard = () => {
     const [globalLeaderboard, setGlobalLeaderboard] = useState([]);
@@ -13,14 +12,10 @@ export const useLeaderboard = () => {
     const fetchGlobalLeaderboard = async () => {
         try {
             setLoading(true);
-            const response = await fetch(`${API_URL}/leaderboard/global`, {
-                credentials: 'include'
-            });
-            if (!response.ok) throw new Error('Failed to fetch global leaderboard');
-            const data = await response.json();
-            setGlobalLeaderboard(data);
+            const response = await apiInstance.get('/leaderboard/global');
+            setGlobalLeaderboard(response.data);
         } catch (err) {
-            setError(err.message);
+            setError(err.message || err.response?.data?.message || 'Failed to fetch global leaderboard');
         } finally {
             setLoading(false);
         }
@@ -30,14 +25,10 @@ export const useLeaderboard = () => {
     const fetchFriendsLeaderboard = async () => {
         try {
             setLoading(true);
-            const response = await fetch(`${API_URL}/leaderboard/friends`, {
-                credentials: 'include'
-            });
-            if (!response.ok) throw new Error('Failed to fetch friends leaderboard');
-            const data = await response.json();
-            setFriendsLeaderboard(data);
+            const response = await apiInstance.get('/leaderboard/friends');
+            setFriendsLeaderboard(response.data);
         } catch (err) {
-            setError(err.message);
+            setError(err.message || err.response?.data?.message || 'Failed to fetch friends leaderboard');
         } finally {
             setLoading(false);
         }
@@ -47,24 +38,14 @@ export const useLeaderboard = () => {
     const updateStats = async (stats) => {
         try {
             setLoading(true);
-            const response = await fetch(`${API_URL}/leaderboard/update`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify(stats)
-            });
-            if (!response.ok) throw new Error('Failed to update stats');
-            const data = await response.json();
-            
-            // Update both leaderboards
+            const response = await apiInstance.post('/leaderboard/update', stats);
             await Promise.all([
                 fetchGlobalLeaderboard(),
                 fetchFriendsLeaderboard()
             ]);
-            
-            return data;
+            return response.data;
         } catch (err) {
-            setError(err.message);
+            setError(err.message || err.response?.data?.message || 'Failed to update stats');
             return null;
         } finally {
             setLoading(false);
@@ -75,14 +56,10 @@ export const useLeaderboard = () => {
     const fetchAchievements = async () => {
         try {
             setLoading(true);
-            const response = await fetch(`${API_URL}/leaderboard/achievements`, {
-                credentials: 'include'
-            });
-            if (!response.ok) throw new Error('Failed to fetch achievements');
-            const data = await response.json();
-            setAchievements(data.achievements);
+            const response = await apiInstance.get('/leaderboard/achievements');
+            setAchievements(response.data.achievements);
         } catch (err) {
-            setError(err.message);
+            setError(err.message || err.response?.data?.message || 'Failed to fetch achievements');
         } finally {
             setLoading(false);
         }

@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+import apiInstance from '../services/api';
 
 export const useChallenges = () => {
     const [challenges, setChallenges] = useState([]);
@@ -11,14 +10,10 @@ export const useChallenges = () => {
     const fetchChallenges = async () => {
         try {
             setLoading(true);
-            const response = await fetch(`${API_URL}/challenges`, {
-                credentials: 'include'
-            });
-            if (!response.ok) throw new Error('Failed to fetch challenges');
-            const data = await response.json();
-            setChallenges(data);
+            const response = await apiInstance.get('/challenges');
+            setChallenges(response.data);
         } catch (err) {
-            setError(err.message);
+            setError(err.message || err.response?.data?.message || 'Failed to fetch challenges');
         } finally {
             setLoading(false);
         }
@@ -28,18 +23,11 @@ export const useChallenges = () => {
     const createChallenge = async (challengeData) => {
         try {
             setLoading(true);
-            const response = await fetch(`${API_URL}/challenges`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify(challengeData)
-            });
-            if (!response.ok) throw new Error('Failed to create challenge');
-            const data = await response.json();
-            setChallenges(prev => [...prev, data]);
-            return data;
+            const response = await apiInstance.post('/challenges', challengeData);
+            setChallenges(prev => [...prev, response.data]);
+            return response.data;
         } catch (err) {
-            setError(err.message);
+            setError(err.message || err.response?.data?.message || 'Failed to create challenge');
             return null;
         } finally {
             setLoading(false);
@@ -50,18 +38,11 @@ export const useChallenges = () => {
     const joinChallenge = async (challengeId) => {
         try {
             setLoading(true);
-            const response = await fetch(`${API_URL}/challenges/${challengeId}/join`, {
-                method: 'POST',
-                credentials: 'include'
-            });
-            if (!response.ok) throw new Error('Failed to join challenge');
-            const data = await response.json();
-            setChallenges(prev => prev.map(c => 
-                c._id === challengeId ? data : c
-            ));
-            return data;
+            const response = await apiInstance.post(`/challenges/${challengeId}/join`);
+            setChallenges(prev => prev.map(c => c._id === challengeId ? response.data : c));
+            return response.data;
         } catch (err) {
-            setError(err.message);
+            setError(err.message || err.response?.data?.message || 'Failed to join challenge');
             return null;
         } finally {
             setLoading(false);
@@ -72,20 +53,11 @@ export const useChallenges = () => {
     const updateProgress = async (challengeId, progress) => {
         try {
             setLoading(true);
-            const response = await fetch(`${API_URL}/challenges/${challengeId}/progress`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify({ progress })
-            });
-            if (!response.ok) throw new Error('Failed to update progress');
-            const data = await response.json();
-            setChallenges(prev => prev.map(c => 
-                c._id === challengeId ? data : c
-            ));
-            return data;
+            const response = await apiInstance.post(`/challenges/${challengeId}/progress`, { progress });
+            setChallenges(prev => prev.map(c => c._id === challengeId ? response.data : c));
+            return response.data;
         } catch (err) {
-            setError(err.message);
+            setError(err.message || err.response?.data?.message || 'Failed to update progress');
             return null;
         } finally {
             setLoading(false);
@@ -96,14 +68,10 @@ export const useChallenges = () => {
     const getChallengeDetails = async (challengeId) => {
         try {
             setLoading(true);
-            const response = await fetch(`${API_URL}/challenges/${challengeId}`, {
-                credentials: 'include'
-            });
-            if (!response.ok) throw new Error('Failed to fetch challenge details');
-            const data = await response.json();
-            return data;
+            const response = await apiInstance.get(`/challenges/${challengeId}`);
+            return response.data;
         } catch (err) {
-            setError(err.message);
+            setError(err.message || err.response?.data?.message || 'Failed to fetch challenge details');
             return null;
         } finally {
             setLoading(false);

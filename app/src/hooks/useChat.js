@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSocket } from './useSocket';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+import apiInstance from '../services/api';
 
 export const useChat = (userId) => {
     const [chats, setChats] = useState([]);
@@ -16,14 +15,10 @@ export const useChat = (userId) => {
     const fetchChats = async () => {
         try {
             setLoading(true);
-            const response = await fetch(`${API_URL}/chat`, {
-                credentials: 'include'
-            });
-            if (!response.ok) throw new Error('Failed to fetch chats');
-            const data = await response.json();
-            setChats(data);
+            const response = await apiInstance.get('/chat');
+            setChats(response.data);
         } catch (err) {
-            setError(err.message);
+            setError(err.message || err.response?.data?.message || 'Failed to fetch chats');
         } finally {
             setLoading(false);
         }
@@ -33,15 +28,11 @@ export const useChat = (userId) => {
     const getChat = async (otherUserId) => {
         try {
             setLoading(true);
-            const response = await fetch(`${API_URL}/chat/${otherUserId}`, {
-                credentials: 'include'
-            });
-            if (!response.ok) throw new Error('Failed to fetch chat');
-            const data = await response.json();
-            setCurrentChat(data);
-            return data;
+            const response = await apiInstance.get(`/chat/${otherUserId}`);
+            setCurrentChat(response.data);
+            return response.data;
         } catch (err) {
-            setError(err.message);
+            setError(err.message || err.response?.data?.message || 'Failed to fetch chat');
             return null;
         } finally {
             setLoading(false);
@@ -54,18 +45,12 @@ export const useChat = (userId) => {
 
         try {
             setLoading(true);
-            const response = await fetch(`${API_URL}/chat/${currentChat.participants.find(p => p._id !== userId)._id}/message`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify({ content, attachments })
-            });
-            if (!response.ok) throw new Error('Failed to send message');
-            const data = await response.json();
-            setCurrentChat(data);
-            return data;
+            const otherUserId = currentChat.participants.find(p => p._id !== userId)._id;
+            const response = await apiInstance.post(`/chat/${otherUserId}/message`, { content, attachments });
+            setCurrentChat(response.data);
+            return response.data;
         } catch (err) {
-            setError(err.message);
+            setError(err.message || err.response?.data?.message || 'Failed to send message');
             return null;
         } finally {
             setLoading(false);
@@ -75,30 +60,21 @@ export const useChat = (userId) => {
     // Mark messages as read
     const markAsRead = async (otherUserId) => {
         try {
-            const response = await fetch(`${API_URL}/chat/${otherUserId}/read`, {
-                method: 'POST',
-                credentials: 'include'
-            });
-            if (!response.ok) throw new Error('Failed to mark messages as read');
-            const data = await response.json();
-            setCurrentChat(data);
+            const response = await apiInstance.post(`/chat/${otherUserId}/read`);
+            setCurrentChat(response.data);
             await fetchUnreadCount();
         } catch (err) {
-            setError(err.message);
+            setError(err.message || err.response?.data?.message || 'Failed to mark messages as read');
         }
     };
 
     // Fetch unread message count
     const fetchUnreadCount = async () => {
         try {
-            const response = await fetch(`${API_URL}/chat/unread/count`, {
-                credentials: 'include'
-            });
-            if (!response.ok) throw new Error('Failed to fetch unread count');
-            const data = await response.json();
-            setUnreadCount(data.unreadCount);
+            const response = await apiInstance.get('/chat/unread/count');
+            setUnreadCount(response.data.unreadCount);
         } catch (err) {
-            setError(err.message);
+            setError(err.message || err.response?.data?.message || 'Failed to fetch unread count');
         }
     };
 

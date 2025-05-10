@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSocket } from './useSocket';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+import apiInstance from '../services/api';
 
 export const useActivity = (userId) => {
     const [activities, setActivities] = useState([]);
@@ -14,14 +13,10 @@ export const useActivity = (userId) => {
     const fetchActivityFeed = async () => {
         try {
             setLoading(true);
-            const response = await fetch(`${API_URL}/activity/feed`, {
-                credentials: 'include'
-            });
-            if (!response.ok) throw new Error('Failed to fetch activity feed');
-            const data = await response.json();
-            setActivities(data);
+            const response = await apiInstance.get('/activity/feed');
+            setActivities(response.data);
         } catch (err) {
-            setError(err.message);
+            setError(err.message || err.response?.data?.message || 'Failed to fetch activity feed');
         } finally {
             setLoading(false);
         }
@@ -31,14 +26,10 @@ export const useActivity = (userId) => {
     const fetchUserActivities = async (targetUserId) => {
         try {
             setLoading(true);
-            const response = await fetch(`${API_URL}/activity/user/${targetUserId}`, {
-                credentials: 'include'
-            });
-            if (!response.ok) throw new Error('Failed to fetch user activities');
-            const data = await response.json();
-            setActivities(data);
+            const response = await apiInstance.get(`/activity/user/${targetUserId}`);
+            setActivities(response.data);
         } catch (err) {
-            setError(err.message);
+            setError(err.message || err.response?.data?.message || 'Failed to fetch user activities');
         } finally {
             setLoading(false);
         }
@@ -48,18 +39,11 @@ export const useActivity = (userId) => {
     const createActivity = async (activityData) => {
         try {
             setLoading(true);
-            const response = await fetch(`${API_URL}/activity`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify(activityData)
-            });
-            if (!response.ok) throw new Error('Failed to create activity');
-            const data = await response.json();
-            setActivities(prev => [data, ...prev]);
-            return data;
+            const response = await apiInstance.post('/activity', activityData);
+            setActivities(prev => [response.data, ...prev]);
+            return response.data;
         } catch (err) {
-            setError(err.message);
+            setError(err.message || err.response?.data?.message || 'Failed to create activity');
             return null;
         } finally {
             setLoading(false);
@@ -70,20 +54,11 @@ export const useActivity = (userId) => {
     const updateActivityVisibility = async (activityId, visibility) => {
         try {
             setLoading(true);
-            const response = await fetch(`${API_URL}/activity/${activityId}/visibility`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify({ visibility })
-            });
-            if (!response.ok) throw new Error('Failed to update activity visibility');
-            const data = await response.json();
-            setActivities(prev => prev.map(a => 
-                a._id === activityId ? data : a
-            ));
-            return data;
+            const response = await apiInstance.patch(`/activity/${activityId}/visibility`, { visibility });
+            setActivities(prev => prev.map(a => a._id === activityId ? response.data : a));
+            return response.data;
         } catch (err) {
-            setError(err.message);
+            setError(err.message || err.response?.data?.message || 'Failed to update activity visibility');
             return null;
         } finally {
             setLoading(false);
@@ -94,15 +69,11 @@ export const useActivity = (userId) => {
     const deleteActivity = async (activityId) => {
         try {
             setLoading(true);
-            const response = await fetch(`${API_URL}/activity/${activityId}`, {
-                method: 'DELETE',
-                credentials: 'include'
-            });
-            if (!response.ok) throw new Error('Failed to delete activity');
+            await apiInstance.delete(`/activity/${activityId}`);
             setActivities(prev => prev.filter(a => a._id !== activityId));
             return true;
         } catch (err) {
-            setError(err.message);
+            setError(err.message || err.response?.data?.message || 'Failed to delete activity');
             return false;
         } finally {
             setLoading(false);
