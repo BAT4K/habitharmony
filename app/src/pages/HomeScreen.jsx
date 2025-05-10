@@ -128,21 +128,15 @@ const getCurrentWeek = () => {
   const today = new Date();
   const day = today.getDay();
   const diff = today.getDate() - day + (day === 0 ? -6 : 1); // Adjust when day is Sunday
-  
   const monday = new Date(today.setDate(diff));
   const week = [];
-  
   for (let i = 0; i < 7; i++) {
     const currentDate = new Date(monday);
     currentDate.setDate(monday.getDate() + i);
-    
     const dayName = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][i];
-    const dayNum = currentDate.getDate();
-    const isToday = i === 2; // Assuming Wednesday is today for the demo
-    
-    week.push({ dayName, dayNum, isToday });
+    const dateStr = currentDate.toLocaleDateString('en-CA');
+    week.push({ dayName, dateStr, dayNum: currentDate.getDate() });
   }
-  
   return week;
 };
 
@@ -892,19 +886,15 @@ const HomeScreen = () => {
               className="flex justify-between overflow-x-auto py-2 gap-1"
             >
               {week.map((day, index) => {
-                const today = new Date();
-                const weekStart = new Date(today.getFullYear(), today.getMonth(), today.getDate() - today.getDay() + 1); // Monday as start
-                const dateObj = new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate() + index);
-                const dateStr = dateObj.toLocaleDateString('en-CA');
-                const colorClass = getDayColor(dateStr);
-                const todayClass = isToday(dateStr) ? 'ring-2 ring-blue-500 ring-offset-2 font-bold' : '';
+                const colorClass = getDayColor(day.dateStr);
+                const todayClass = isToday(day.dateStr) ? 'ring-2 ring-blue-500 ring-offset-2 font-bold' : '';
                 return (
                   <motion.div
                     key={index}
                     whileHover={{ y: -2 }}
                     whileTap={{ scale: 0.95 }}
                     className={`flex-shrink-0 rounded-2xl w-12 h-16 flex flex-col items-center justify-center cursor-pointer ${colorClass} ${todayClass}`}
-                    onClick={() => openDayDetails(dateStr)}
+                    onClick={() => openDayDetails(day.dateStr)}
                   >
                     <span className="text-xs font-medium">{day.dayName}</span>
                     <span className="text-lg font-bold mt-1">{day.dayNum}</span>

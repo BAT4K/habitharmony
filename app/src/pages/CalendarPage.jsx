@@ -429,7 +429,7 @@ const CalendarScreen = () => {
   return (
     <div className="min-h-screen bg-[#F8F3F3] pb-24 relative overflow-y-auto">
       {/* Header - Sticky */}
-      <div className="sticky top-0 bg-[#F8F3F3] z-10 pt-7 pb-4 px-4 shadow-sm">
+      <div className="sticky top-0 bg-[#F8F3F3] z-10 pt-4 pb-2 px-4 shadow-sm">
         <div className="flex justify-between items-center mb-2">
           <h1 className="font-bold text-2xl tracking-tight">Calendar</h1>
           {/* Points, streak, and profile picture row (top right) */}
