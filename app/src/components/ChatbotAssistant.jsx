@@ -1212,7 +1212,19 @@ Here is the user's habit data:
                       : 'bg-white border border-gray-200 rounded-tl-none'
                   }`}>
                     {message.sender === 'ai' ? (
-                      <ReactMarkdown className="whitespace-pre-line">{message.text}</ReactMarkdown>
+                      <ReactMarkdown
+                        components={{
+                          strong: ({node, ...props}) => <strong className="font-bold">{props.children}</strong>,
+                          b: ({node, ...props}) => <b className="font-bold">{props.children}</b>,
+                          em: ({node, ...props}) => <em className="italic">{props.children}</em>,
+                          ul: ({node, ...props}) => <ul className="list-disc ml-6 mb-2">{props.children}</ul>,
+                          ol: ({node, ...props}) => <ol className="list-decimal ml-6 mb-2">{props.children}</ol>,
+                          li: ({node, ...props}) => <li className="mb-1">{props.children}</li>,
+                          p: ({node, ...props}) => <p className="mb-2">{props.children}</p>,
+                        }}
+                      >
+                        {message.text}
+                      </ReactMarkdown>
                     ) : (
                       <p className="whitespace-pre-line">{message.text}</p>
                     )}

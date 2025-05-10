@@ -5,6 +5,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from 'react-router-dom';
+import maradImg from '../assets/marad.png';
 
 // Constants from HomeScreen
 const HABITS_STORAGE_KEY = 'habitharmony_user_habits';
@@ -73,7 +74,9 @@ const CalendarScreen = () => {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [currentTheme, setCurrentTheme] = useState(() => localStorage.getItem('habitharmony_theme') || 'light');
   const isPremium = localStorage.getItem('habitharmony_premium') === 'true';
-  const avatar = localStorage.getItem('habitharmony_avatar') || '/api/placeholder/40/40';
+  const [avatar, setAvatar] = useState(() =>
+    localStorage.getItem('habitharmony_avatar') || maradImg
+  );
   const navigate = useNavigate();
 
   // Get the current month and year
@@ -413,6 +416,15 @@ const CalendarScreen = () => {
       </button>
     );
   }
+
+  // Sync avatar with localStorage changes
+  useEffect(() => {
+    const syncAvatar = () => {
+      setAvatar(localStorage.getItem('habitharmony_avatar') || maradImg);
+    };
+    window.addEventListener('storage', syncAvatar);
+    return () => window.removeEventListener('storage', syncAvatar);
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#F8F3F3] pb-24 relative overflow-y-auto">
