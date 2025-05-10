@@ -698,42 +698,6 @@ Answer user questions clearly and conversationally, using this data when relevan
       setRemainingMessages(newRemaining);
       localStorage.setItem('habitharmony_remaining_messages', newRemaining.toString());
 
-      // Update suggestions based on the conversation context
-      const lastMessage = assistantMessage.toLowerCase();
-      let newSuggestions;
-      
-      if (lastMessage.includes('habit')) {
-        newSuggestions = [
-          "How can I make this habit stick?",
-          "What's a good time to do this?",
-          "How do I track my progress?",
-          "What if I miss a day?"
-        ];
-      } else if (lastMessage.includes('streak')) {
-        newSuggestions = [
-          "How can I maintain my streak?",
-          "What's my best streak?",
-          "How do I recover from a break?",
-          "Tips for consistency"
-        ];
-      } else if (lastMessage.includes('motivation')) {
-        newSuggestions = [
-          "How do I stay motivated?",
-          "What are some quick wins?",
-          "How to overcome obstacles?",
-          "Share a success story"
-        ];
-      } else {
-        newSuggestions = [
-          "Tell me more about that",
-          "How can I apply this?",
-          "What's the next step?",
-          "Can you give me an example?"
-        ];
-      }
-      
-      setSuggestions(newSuggestions);
-
     } catch (error) {
       console.error('Error:', error);
       setMessages(prev => [...prev, { 
@@ -745,7 +709,7 @@ Answer user questions clearly and conversationally, using this data when relevan
     }
   };
 
-  // Handle quick suggestion clicks
+  // Simplify handleSuggestionClick
   const handleSuggestionClick = async (suggestion) => {
     setInput(suggestion);
     await handleSendMessage(suggestion);
@@ -1101,10 +1065,6 @@ Answer user questions clearly and conversationally, using this data when relevan
   };
 
   const habitData = getUserHabitData();
-  useEffect(() => {
-    const personalizedSuggestions = getPersonalizedSuggestions({ userName, habitData, currentMood, messages });
-    setSuggestions(personalizedSuggestions);
-  }, [messages, currentMood, userName, habitData]);
 
   return (
     <div className="min-h-screen font-display bg-[#F8F3F3] pb-24 relative flex flex-col">
