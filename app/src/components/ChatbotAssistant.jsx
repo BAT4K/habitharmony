@@ -593,6 +593,23 @@ Answer user questions clearly and conversationally, using this data when relevan
     }
   };
 
+  // Function to send a message
+  const handleSendMessage = async (input) => {
+    if (!input.trim() || isLoading || remainingMessages <= 0) return;
+
+    setInput('');
+    setIsLoading(true);
+
+    // Add user message to chat
+    setMessages(prev => [
+      ...prev,
+      { id: prev.length + 1, text: input, sender: 'user', time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }
+    ]);
+
+    // Get AI response
+    await getAIResponse(input);
+  };
+
   // Simplify handleSuggestionClick
   const handleSuggestionClick = async (suggestion) => {
     setInput(suggestion);
