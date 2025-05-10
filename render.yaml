@@ -26,4 +26,6 @@ services:
     healthCheckPath: /api/health
     envVars:
       - key: OLLAMA_URL
-        value: http://localhost:11434 
+        value: http://localhost:11434
+      - key: PORT
+        value: 5000 
