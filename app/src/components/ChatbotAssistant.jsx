@@ -9,8 +9,14 @@ import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import maradImg from '../assets/marad.png';
 
-// API configuration
-const API_URL = import.meta.env.VITE_API_URL || "https://habitharmony.onrender.com";
+// Robust helper to normalize API base URL (removes trailing /api or /)
+function getApiBaseUrl() {
+  let url = import.meta.env.VITE_API_URL || "https://habitharmony.onrender.com";
+  url = url.replace(/\/?api\/?$/, ''); // Remove trailing /api or /api/
+  url = url.replace(/\/$/, ''); // Remove trailing /
+  return url;
+}
+const API_BASE_URL = getApiBaseUrl();
 
 // Rate limiting configuration
 const RATE_LIMIT = {
@@ -278,7 +284,7 @@ const getAdvancedPersonalizedGreeting = (name) => {
 };
 
 // Check if API key is configured
-if (!API_URL) {
+if (!API_BASE_URL) {
   console.error('Ollama API URL is not configured. Please add OLLAMA_API_URL to your .env file');
 }
 
@@ -527,7 +533,7 @@ Here is the user's habit data:
 Answer user questions clearly and conversationally, using this data when relevant.
 `;
 
-      const response = await fetch(`${API_URL}/api/chat`, {
+      const response = await fetch(`${API_BASE_URL}/api/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -748,7 +754,7 @@ Answer user questions clearly and conversationally, using this data when relevan
       // Fallback: Try to fetch from API if not in localStorage
       const token = localStorage.getItem('token') || sessionStorage.getItem('token');
       if (token) {
-        fetch(`${API_URL}/api/auth/user`, {
+        fetch(`${API_BASE_URL}/api/auth/user`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
