@@ -54,9 +54,12 @@ io.on('connection', (socket) => {
 
 // CORS setup with more specific configuration
 app.use(cors({
-    origin: process.env.NODE_ENV === 'production' 
-        ? ['https://habitharmony.onrender.com', 'https://habitharmony.vercel.app']
-        : true,
+    origin: [
+        'http://localhost:5173',
+        'http://localhost:3000',
+        'https://habitharmony.onrender.com',
+        'https://habitharmony.vercel.app'
+    ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
