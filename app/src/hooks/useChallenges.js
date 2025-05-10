@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import apiInstance from '../services/api';
+import { apiInstance } from '../services/api';
 
 export const useChallenges = () => {
     const [challenges, setChallenges] = useState([]);

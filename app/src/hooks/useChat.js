@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSocket } from './useSocket';
-import apiInstance from '../services/api';
+import { apiInstance } from '../services/api';
 
 export const useChat = (userId) => {
     const [chats, setChats] = useState([]);

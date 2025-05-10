@@ -145,3 +145,4 @@ const api = {
 };
 
 export default api;
+export { instance as apiInstance };

@@ -15,6 +15,13 @@ import { useAuth } from '../contexts/AuthContext';
 import { ProgressRing } from '../components/ProgressRing';
 import { formatDistanceToNow } from 'date-fns';
 
+const tabClasses = (active) =>
+  `px-4 py-2 rounded-xl font-semibold transition-colors duration-150 text-base focus:outline-none ${
+    active
+      ? 'bg-blue-500 text-white shadow'
+      : 'bg-white text-gray-700 hover:bg-blue-100 border border-gray-200'
+  }`;
+
 const FriendsScreen = () => {
   const { user } = useAuth();
   const [tab, setTab] = useState("friends");
@@ -570,55 +577,23 @@ const FriendsScreen = () => {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Friends</h1>
-        <div className="flex space-x-2">
-          <button
-            onClick={() => setTab('friends')}
-            className={`px-4 py-2 rounded ${
-              tab === 'friends'
-                ? 'bg-blue-500 text-white'
-                : 'bg-gray-100 hover:bg-gray-200'
-            }`}
-          >
-            Friends
-          </button>
-          <button
-            onClick={() => setTab('challenges')}
-            className={`px-4 py-2 rounded ${
-              tab === 'challenges'
-                ? 'bg-blue-500 text-white'
-                : 'bg-gray-100 hover:bg-gray-200'
-            }`}
-          >
-            Challenges
-          </button>
-          <button
-            onClick={() => setTab('leaderboard')}
-            className={`px-4 py-2 rounded ${
-              tab === 'leaderboard'
-                ? 'bg-blue-500 text-white'
-                : 'bg-gray-100 hover:bg-gray-200'
-            }`}
-          >
-            Leaderboard
-          </button>
-          <button
-            onClick={() => setTab('add')}
-            className={`px-4 py-2 rounded ${
-              tab === 'add'
-                ? 'bg-blue-500 text-white'
-                : 'bg-gray-100 hover:bg-gray-200'
-            }`}
-          >
-            Add Friend
-          </button>
+    <div className="min-h-screen font-display bg-[#F8F3F3] pb-24 relative overflow-y-auto">
+      <div className="max-w-2xl mx-auto pt-8">
+        <div className="flex justify-between items-center mb-6 px-4">
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Friends</h1>
+        </div>
+        <div className="flex space-x-2 px-4 mb-6">
+          <button onClick={() => setTab('friends')} className={tabClasses(tab === 'friends')}>Friends</button>
+          <button onClick={() => setTab('challenges')} className={tabClasses(tab === 'challenges')}>Challenges</button>
+          <button onClick={() => setTab('leaderboard')} className={tabClasses(tab === 'leaderboard')}>Leaderboard</button>
+          <button onClick={() => setTab('add')} className={tabClasses(tab === 'add')}>Add Friend</button>
+        </div>
+        <div className="px-2 md:px-4">
+          <div className="bg-white rounded-2xl shadow p-4 min-h-[400px]">
+            {renderContent()}
+          </div>
         </div>
       </div>
-
-      {renderContent()}
-
       {showFriendProfile && renderFriendProfile()}
       {showChat && renderChat()}
     </div>
