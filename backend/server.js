@@ -136,7 +136,7 @@ app.post('/api/chat', async (req, res) => {
         }
 
         // Forward the request to Ollama API
-        const ollamaResponse = await fetch(`${OLLAMA_URL}/api/chat`, {
+        const ollamaResponse = await fetch(`${OLLAMA_URL}/api/generate`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
