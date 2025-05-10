@@ -10,7 +10,7 @@ import api from '../services/api';
 import maradImg from '../assets/marad.png';
 
 // API configuration
-const OLLAMA_API_URL = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api/chat` : "https://habitharmony.onrender.com/api/chat";
+const API_URL = import.meta.env.VITE_API_URL || "https://habitharmony.onrender.com";
 
 // Rate limiting configuration
 const RATE_LIMIT = {
@@ -278,7 +278,7 @@ const getAdvancedPersonalizedGreeting = (name) => {
 };
 
 // Check if API key is configured
-if (!OLLAMA_API_URL) {
+if (!API_URL) {
   console.error('Ollama API URL is not configured. Please add OLLAMA_API_URL to your .env file');
 }
 
@@ -422,9 +422,6 @@ function getPersonalizedSuggestions({ userName, habitData, currentMood, messages
   return moodSuggestions;
 }
 
-// Add this near the top of the file, after imports
-const API_URL = 'https://habitharmony.onrender.com';
-
 // Main AI Coach Component
 export default function AICoach({ onBack }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -530,126 +527,13 @@ Here is the user's habit data:
 Answer user questions clearly and conversationally, using this data when relevant.
 `;
 
-      const response = await fetch(OLLAMA_API_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "phi3:mini",
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: text }
-          ],
-          stream: false
-        }),
-      });
-
-      if (!response.ok) {
-        return fallbackResponses.error;
-      }
-
-      const data = await response.json();
-      // Ollama returns the response in data.message.content
-      return data.message?.content?.trim() || fallbackResponses.default;
-    } catch (error) {
-      console.error('Error getting AI response:', error);
-      return fallbackResponses.error;
-    }
-  };
-
-  // Fix getAIResponseStream to use phi3:mini
-  const getAIResponseStream = async (text, onChunk) => {
-    const habitData = getUserHabitData();
-    const systemPrompt = `
-You are Coach Nova, the AI coach for Habit Harmony, a habit tracking and wellness app.
-Always refer to the app as Habit Harmony and never mention any other company or app name.
-Here is the user's habit data:
-- Current streak: ${habitData.streak}
-- Best streak: ${habitData.bestStreak}
-- Longest streak habit: ${habitData.longestStreakHabit || 'N/A'}
-- Points: ${habitData.points}
-- Most consistent habit: ${habitData.mostConsistentHabit || 'N/A'}
-- Habits: ${habitData.habits.map(h => h.name).join(', ') || 'None'}
-- Habits completed this week: ${Object.entries(habitData.completedThisWeek).map(([k,v]) => `${k} (${v})`).join(', ') || 'None'}
-- Last completed habit: ${habitData.lastCompletedHabit || 'N/A'}
-- Total completions (all time): ${habitData.totalCompletionsAllTime}
-- Average completions per week: ${habitData.avgCompletionsPerWeek}
-- Missed habits this week: ${Object.keys(habitData.missedThisWeek).join(', ') || 'None'}
-- Best month: ${habitData.bestMonth || 'N/A'} (${habitData.bestMonthCount} completions)
-- Most improved habit (last 30 days): ${habitData.mostImprovedHabit || 'N/A'} (+${habitData.maxStreakIncrease} streak)
-- Recent completions: ${Object.keys(habitData.calendarHistory).slice(-7).join(', ')}
-
-Answer user questions clearly and conversationally, using this data when relevant.
-`;
-
-    const response = await fetch(OLLAMA_API_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-            model: "phi3:mini",
-            messages: [
-                { role: "system", content: systemPrompt },
-                { role: "user", content: text }
-            ],
-            stream: true
-        }),
-    });
-
-    if (!response.body) throw new Error("No response body");
-
-    // Use TextDecoderStream for modern browsers
-    const stream = response.body
-        .pipeThrough(new TextDecoderStream());
-    const reader = stream.getReader();
-
-    let fullText = "";
-    while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        
-        // Split by newlines and process each line
-        const lines = value.split('\n');
-        for (const line of lines) {
-            if (line.trim()) {
-                try {
-                    const data = JSON.parse(line);
-                    const token = data.message?.content || "";
-                    if (token) {
-                        fullText += token;
-                        onChunk(fullText);
-                    }
-                } catch (e) {
-                    // If it's not JSON, it might be a direct token
-                    if (line.trim()) {
-                        fullText += line.trim();
-                        onChunk(fullText);
-                    }
-                }
-            }
-        }
-    }
-    return fullText;
-};
-
-  // Update handleSendMessage to handle suggestions after successful message
-  const handleSendMessage = async (input) => {
-    // Handle both event and direct text input
-    const messageText = typeof input === 'string' ? input : input.target?.value || '';
-    if (!messageText.trim() || isLoading || remainingMessages <= 0) return;
-
-    setInput('');
-    setMessages(prev => [...prev, { role: 'user', content: messageText }]);
-    setIsLoading(true);
-
-    try {
       const response = await fetch(`${API_URL}/api/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          messages: [{ role: 'user', content: messageText }],
+          messages: [{ role: 'user', content: text }],
           stream: true
         }),
       });
@@ -847,7 +731,7 @@ Answer user questions clearly and conversationally, using this data when relevan
       // Fallback: Try to fetch from API if not in localStorage
       const token = localStorage.getItem('token') || sessionStorage.getItem('token');
       if (token) {
-        fetch('https://habitharmony.onrender.com/api/auth/user', {
+        fetch(`${API_URL}/api/auth/user`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }

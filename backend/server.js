@@ -38,9 +38,14 @@ app.use('/api/auth', require('./routes/auth'));
 
 // Helper function to wait for Ollama service with improved error handling
 const waitForOllama = async (retries = 5, delay = 5000) => {
+    // In production, we don't need to check Ollama as it's a separate service
+    if (process.env.NODE_ENV === 'production') {
+        return true;
+    }
+
     for (let i = 0; i < retries; i++) {
         try {
-            const OLLAMA_URL = process.env.OLLAMA_URL || 'http://ollama:11434';
+            const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434';
             console.log(`Attempting to connect to Ollama at ${OLLAMA_URL}`);
             const response = await fetch(`${OLLAMA_URL}/api/tags`);
             if (response.ok) {
@@ -63,7 +68,19 @@ const waitForOllama = async (retries = 5, delay = 5000) => {
 // Health check endpoint with more detailed status
 app.get('/api/health', async (req, res) => {
     try {
-        const OLLAMA_URL = process.env.OLLAMA_URL || 'http://ollama:11434';
+        // In production, we don't need to check Ollama
+        if (process.env.NODE_ENV === 'production') {
+            const mongoStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
+            return res.json({ 
+                status: 'healthy',
+                ollama: 'external',
+                mongodb: mongoStatus,
+                timestamp: new Date().toISOString(),
+                environment: process.env.NODE_ENV
+            });
+        }
+
+        const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434';
         const ollamaReady = await waitForOllama();
         
         if (!ollamaReady) {
@@ -105,12 +122,17 @@ app.post('/api/chat', async (req, res) => {
             });
         }
 
-        const OLLAMA_URL = process.env.OLLAMA_URL || 'http://ollama:11434';
+        // In production, use the external Ollama service URL
+        const OLLAMA_URL = process.env.NODE_ENV === 'production' 
+            ? process.env.OLLAMA_SERVICE_URL || 'https://ollama.habitharmony.onrender.com'
+            : process.env.OLLAMA_URL || 'http://localhost:11434';
         
-        // Ensure Ollama is ready
-        const ollamaReady = await waitForOllama();
-        if (!ollamaReady) {
-            throw new Error('Ollama service is not available');
+        // Only check Ollama in development
+        if (process.env.NODE_ENV !== 'production') {
+            const ollamaReady = await waitForOllama();
+            if (!ollamaReady) {
+                throw new Error('Ollama service is not available');
+            }
         }
 
         // Forward the request to Ollama API
