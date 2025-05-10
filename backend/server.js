@@ -1,9 +1,56 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const http = require('http');
+const { Server } = require('socket.io');
 require('dotenv').config();
 
 const app = express();
+const server = http.createServer(app);
+
+// Socket.IO setup with CORS
+const io = new Server(server, {
+    cors: {
+        origin: process.env.NODE_ENV === 'production' 
+            ? ['https://habitharmony.onrender.com', 'https://habitharmony.vercel.app']
+            : true,
+        credentials: true
+    }
+});
+
+// Socket.IO connection handling
+io.on('connection', (socket) => {
+    console.log('User connected:', socket.id);
+
+    // Join user's room for private messages
+    socket.on('join', (userId) => {
+        socket.join(userId);
+    });
+
+    // Handle friend request notifications
+    socket.on('friendRequest', (data) => {
+        io.to(data.toUserId).emit('newFriendRequest', data);
+    });
+
+    // Handle friend request response
+    socket.on('friendRequestResponse', (data) => {
+        io.to(data.fromUserId).emit('friendRequestUpdate', data);
+    });
+
+    // Handle chat messages
+    socket.on('sendMessage', (data) => {
+        io.to(data.toUserId).emit('newMessage', data);
+    });
+
+    // Handle activity updates
+    socket.on('activityUpdate', (data) => {
+        io.to(data.userId).emit('newActivity', data);
+    });
+
+    socket.on('disconnect', () => {
+        console.log('User disconnected:', socket.id);
+    });
+});
 
 // CORS setup with more specific configuration
 app.use(cors({
@@ -32,6 +79,11 @@ mongoose.connect(process.env.MONGODB_URI, {
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));
+app.use('/api/friends', require('./routes/friends'));
+app.use('/api/challenges', require('./routes/challenges'));
+app.use('/api/leaderboard', require('./routes/leaderboard'));
+app.use('/api/chat', require('./routes/chat'));
+app.use('/api/activity', require('./routes/activity'));
 // Temporarily comment out payment routes
 // const paymentRoutes = require('./routes/payment');
 // app.use('/api/payment', paymentRoutes);
@@ -175,7 +227,8 @@ app.use((err, req, res, next) => {
     });
 });
 
+// Update the server.listen to use the HTTP server
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+server.listen(PORT, () => {
     console.log(`Server running on port ${PORT} in ${process.env.NODE_ENV || 'development'} mode`);
 });
