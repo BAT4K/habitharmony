@@ -22,8 +22,10 @@ router.get('/global', auth, async (req, res) => {
 // Get friends leaderboard
 router.get('/friends', auth, async (req, res) => {
     try {
+        console.log('Looking up user with id:', req.user.id);
         const user = await User.findById(req.user.id).populate('friends');
         if (!user) {
+            console.log('User not found in DB for id:', req.user.id);
             return res.status(404).json({ message: 'User not found' });
         }
         const friendIds = user.friends.map(f => f._id);
