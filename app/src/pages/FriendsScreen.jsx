@@ -532,19 +532,19 @@ const FriendsScreen = () => {
   };
 
   return (
-    <div className="min-h-screen font-display bg-[#F8F3F3] pb-24 relative overflow-y-auto">
-      <div className="max-w-2xl mx-auto pt-8">
+    <div className="min-h-screen font-display bg-[#F8F3F3] pb-24 relative overflow-y-auto w-full flex justify-center">
+      <div className="w-full max-w-screen-sm mx-auto pt-8">
         <div className="flex justify-between items-center mb-6 px-4">
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Friends</h1>
         </div>
-        <div className="flex space-x-2 px-4 mb-6">
-          <button onClick={() => setTab('friends')} className={tabClasses(tab === 'friends')}>Friends</button>
-          <button onClick={() => setTab('challenges')} className={tabClasses(tab === 'challenges')}>Challenges</button>
-          <button onClick={() => setTab('leaderboard')} className={tabClasses(tab === 'leaderboard')}>Leaderboard</button>
-          <button onClick={() => setTab('add')} className={tabClasses(tab === 'add')}>Add Friend</button>
+        <div className="flex space-x-2 px-2 mb-6 overflow-x-auto scrollbar-hide w-full">
+          <button onClick={() => setTab('friends')} className={tabClasses(tab === 'friends') + ' min-w-[110px]'}>Friends</button>
+          <button onClick={() => setTab('challenges')} className={tabClasses(tab === 'challenges') + ' min-w-[110px]'}>Challenges</button>
+          <button onClick={() => setTab('leaderboard')} className={tabClasses(tab === 'leaderboard') + ' min-w-[110px]'}>Leaderboard</button>
+          <button onClick={() => setTab('add')} className={tabClasses(tab === 'add') + ' min-w-[110px]'}>Add Friend</button>
         </div>
-        <div className="px-2 md:px-4">
-          <div className="bg-white rounded-2xl shadow p-4 min-h-[400px]">
+        <div className="px-2 md:px-4 w-full">
+          <div className="bg-white rounded-2xl shadow p-4 min-h-[400px] w-full overflow-x-hidden">
             {renderContent()}
           </div>
         </div>

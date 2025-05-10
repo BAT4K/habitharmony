@@ -14,6 +14,7 @@ router.get('/global', auth, async (req, res) => {
 
         res.json(leaderboard);
     } catch (error) {
+        console.error('Error in /api/leaderboard/global:', error);
         res.status(500).json({ message: error.message });
     }
 });
@@ -32,6 +33,7 @@ router.get('/friends', auth, async (req, res) => {
 
         res.json(leaderboard);
     } catch (error) {
+        console.error('Error in /api/leaderboard/friends:', error);
         res.status(500).json({ message: error.message });
     }
 });
@@ -96,6 +98,7 @@ router.post('/update', auth, async (req, res) => {
 
         res.json(leaderboard);
     } catch (error) {
+        console.error('Error in /api/leaderboard/update:', error);
         res.status(500).json({ message: error.message });
     }
 });
@@ -109,6 +112,7 @@ router.get('/achievements', auth, async (req, res) => {
         }
         res.json({ achievements: leaderboard.achievements });
     } catch (error) {
+        console.error('Error in /api/leaderboard/achievements:', error);
         res.status(500).json({ message: error.message });
     }
 });
