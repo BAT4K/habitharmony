@@ -143,6 +143,7 @@ app.post('/api/chat', async (req, res) => {
         }
 
         const data = await geminiResponse.json();
+        console.log('Gemini API raw response:', data);
         // Extract the response text
         const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
         res.json({ message: { content: responseText } });
