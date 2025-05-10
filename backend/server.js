@@ -124,7 +124,7 @@ app.post('/api/chat', async (req, res) => {
 
         // In production, use the external Ollama service URL
         const OLLAMA_URL = process.env.NODE_ENV === 'production' 
-            ? process.env.OLLAMA_SERVICE_URL || 'https://ollama.habitharmony.onrender.com'
+            ? process.env.OLLAMA_SERVICE_URL || 'http://habitharmony-ollama:11434'
             : process.env.OLLAMA_URL || 'http://localhost:11434';
         
         // Only check Ollama in development
