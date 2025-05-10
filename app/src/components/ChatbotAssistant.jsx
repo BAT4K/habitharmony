@@ -638,7 +638,7 @@ Answer user questions clearly and conversationally, using this data when relevan
     setIsLoading(true);
 
     try {
-      const response = await fetch('http://localhost:5000/api/chat', {
+      const response = await fetch(`${API_URL}/api/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -689,8 +689,8 @@ Answer user questions clearly and conversationally, using this data when relevan
       setRemainingMessages(newRemaining);
       localStorage.setItem('habitharmony_remaining_messages', newRemaining.toString());
 
-      // Update suggestions after successful message
-      setTimeout(updateSuggestions, 500);
+      // Update suggestions after successful message with a delay
+      setTimeout(updateSuggestions, 1000);
 
     } catch (error) {
       console.error('Error:', error);
@@ -713,26 +713,32 @@ Answer user questions clearly and conversationally, using this data when relevan
 
   // Add this function to update suggestions
   const updateSuggestions = useCallback(() => {
-    const newSuggestions = getPersonalizedSuggestions({ 
-      userName, 
-      habitData: getUserHabitData(), 
-      currentMood, 
-      messages 
-    });
-    setSuggestions(prev => {
-      // Only update if there are significant changes
-      if (JSON.stringify(prev) !== JSON.stringify(newSuggestions)) {
-        return newSuggestions;
-      }
-      return prev;
-    });
+    // Only update suggestions if we have messages or user data
+    if (messages.length > 0 || userName) {
+      const newSuggestions = getPersonalizedSuggestions({ 
+        userName, 
+        habitData: getUserHabitData(), 
+        currentMood, 
+        messages 
+      });
+      setSuggestions(prev => {
+        // Only update if there are significant changes
+        if (JSON.stringify(prev) !== JSON.stringify(newSuggestions)) {
+          return newSuggestions;
+        }
+        return prev;
+      });
+    }
   }, [userName, currentMood, messages]);
 
-  // Update the useEffect for suggestions
+  // Update the useEffect for suggestions to only run when necessary
   useEffect(() => {
-    const timeoutId = setTimeout(updateSuggestions, 1000); // Debounce for 1 second
-    return () => clearTimeout(timeoutId);
-  }, [updateSuggestions]);
+    // Only set up the interval if we have messages or user data
+    if (messages.length > 0 || userName) {
+      const timeoutId = setTimeout(updateSuggestions, 2000); // Increased debounce to 2 seconds
+      return () => clearTimeout(timeoutId);
+    }
+  }, [updateSuggestions, messages.length, userName]);
 
   // Handle quick suggestion clicks
   const handleSuggestionClick = async (suggestion) => {
