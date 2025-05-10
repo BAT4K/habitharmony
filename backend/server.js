@@ -109,76 +109,46 @@ app.get('/api/health', async (req, res) => {
     }
 });
 
-// Chatbot endpoint with improved error handling and request validation
+// Gemini API integration
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+
 app.post('/api/chat', async (req, res) => {
     try {
-        const { messages, stream } = req.body;
-        
-        // Validate request
+        const { messages } = req.body;
         if (!messages || !Array.isArray(messages) || messages.length === 0) {
-            return res.status(400).json({ 
+            return res.status(400).json({
                 error: 'Invalid request',
                 message: 'Messages array is required and must not be empty'
             });
         }
 
-        // In production, use the external Ollama service URL
-        const OLLAMA_URL = process.env.NODE_ENV === 'production' 
-            ? process.env.OLLAMA_SERVICE_URL || 'http://habitharmony-ollama:11434'
-            : process.env.OLLAMA_URL || 'http://localhost:11434';
-        
-        // Only check Ollama in development
-        if (process.env.NODE_ENV !== 'production') {
-            const ollamaReady = await waitForOllama();
-            if (!ollamaReady) {
-                throw new Error('Ollama service is not available');
+        // Convert messages to Gemini format
+        const geminiMessages = [
+            {
+                parts: messages.map(m => ({ text: m.content }))
             }
-        }
+        ];
 
-        // Forward the request to Ollama API
-        const ollamaResponse = await fetch(`${OLLAMA_URL}/api/generate`, {
+        const geminiResponse = await fetch(GEMINI_URL, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                model: "phi3:mini",
-                messages: messages,
-                stream: stream || false
-            }),
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contents: geminiMessages })
         });
 
-        if (!ollamaResponse.ok) {
-            const errorData = await ollamaResponse.text();
-            console.error('Ollama API error:', errorData);
-            throw new Error(`Failed to get response from Ollama: ${ollamaResponse.status} ${ollamaResponse.statusText}`);
+        if (!geminiResponse.ok) {
+            const errorData = await geminiResponse.text();
+            console.error('Gemini API error:', errorData);
+            throw new Error(`Failed to get response from Gemini: ${geminiResponse.status} ${geminiResponse.statusText}`);
         }
 
-        // If streaming is requested, pipe the response
-        if (stream) {
-            res.setHeader('Content-Type', 'text/event-stream');
-            res.setHeader('Cache-Control', 'no-cache');
-            res.setHeader('Connection', 'keep-alive');
-            
-            // Add error handling for the stream
-            ollamaResponse.body.on('error', (error) => {
-                console.error('Stream error:', error);
-                res.end();
-            });
-            
-            ollamaResponse.body.pipe(res);
-            
-            // Handle client disconnect
-            req.on('close', () => {
-                ollamaResponse.body.destroy();
-            });
-        } else {
-            const data = await ollamaResponse.json();
-            res.json(data);
-        }
+        const data = await geminiResponse.json();
+        // Extract the response text
+        const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        res.json({ message: { content: responseText } });
     } catch (error) {
         console.error('Chatbot error:', error);
-        res.status(500).json({ 
+        res.status(500).json({
             error: 'Failed to get AI response',
             message: error.message,
             details: process.env.NODE_ENV === 'development' ? error.stack : undefined
