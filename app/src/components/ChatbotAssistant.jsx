@@ -720,7 +720,7 @@ Answer user questions clearly and conversationally, using this data when relevan
     }
   };
 
-  // Update handleSuggestionClick to use simpler suggestion handling
+  // Handle quick suggestion clicks
   const handleSuggestionClick = async (suggestion) => {
     setInput(suggestion);
     await handleSendMessage(suggestion);
@@ -732,13 +732,6 @@ Answer user questions clearly and conversationally, using this data when relevan
       e.preventDefault();
       handleSendMessage(input);
     }
-  };
-
-  // Handle quick suggestion clicks
-  const handleSuggestionClick = async (suggestion) => {
-    setInput(suggestion);
-    await handleSendMessage(suggestion);
-    // Don't update suggestions here - it will be handled by the useEffect
   };
 
   // Handle mood selection
