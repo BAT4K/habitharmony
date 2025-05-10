@@ -39,7 +39,12 @@ const userSchema = new mongoose.Schema({
     premium: {
         type: Boolean,
         default: false
-    }
+    },
+    friends: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        default: []
+    }]
 }, {
     timestamps: true
 });
