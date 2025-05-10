@@ -507,93 +507,32 @@ export default function AICoach({ onBack }) {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  // Function to get AI response from Ollama
+  // Function to get AI response from Gemini
   const getAIResponse = async (text) => {
     try {
-      const habitData = getUserHabitData();
-      const systemPrompt = `
-You are Coach Nova, the AI coach for Habit Harmony, a habit tracking and wellness app.
-Always refer to the app as Habit Harmony and never mention any other company or app name.
-Here is the user's habit data:
-- Current streak: ${habitData.streak}
-- Best streak: ${habitData.bestStreak}
-- Longest streak habit: ${habitData.longestStreakHabit || 'N/A'}
-- Points: ${habitData.points}
-- Most consistent habit: ${habitData.mostConsistentHabit || 'N/A'}
-- Habits: ${habitData.habits.map(h => h.name).join(', ') || 'None'}
-- Habits completed this week: ${Object.entries(habitData.completedThisWeek).map(([k,v]) => `${k} (${v})`).join(', ') || 'None'}
-- Last completed habit: ${habitData.lastCompletedHabit || 'N/A'}
-- Total completions (all time): ${habitData.totalCompletionsAllTime}
-- Average completions per week: ${habitData.avgCompletionsPerWeek}
-- Missed habits this week: ${Object.keys(habitData.missedThisWeek).join(', ') || 'None'}
-- Best month: ${habitData.bestMonth || 'N/A'} (${habitData.bestMonthCount} completions)
-- Most improved habit (last 30 days): ${habitData.mostImprovedHabit || 'N/A'} (+${habitData.maxStreakIncrease} streak)
-- Recent completions: ${Object.keys(habitData.calendarHistory).slice(-7).join(', ')}
-
-Answer user questions clearly and conversationally, using this data when relevant.
-`;
-
       const response = await fetch(`${API_BASE_URL}/api/chat`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          messages: [{ role: 'user', content: text }],
-          stream: true
+          messages: [{ role: 'user', content: text }]
         }),
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to get response');
-      }
+      if (!response.ok) throw new Error('Failed to get response');
 
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let assistantMessage = '';
+      const data = await response.json();
+      const aiText = data.message?.content || '[No response]';
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const chunk = decoder.decode(value);
-        const lines = chunk.split('\n').filter(line => line.trim());
-
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            try {
-              const data = JSON.parse(line.slice(6));
-              if (data.response) {
-                assistantMessage += data.response;
-                setMessages(prev => {
-                  const newMessages = [...prev];
-                  const lastMessage = newMessages[newMessages.length - 1];
-                  if (lastMessage && lastMessage.role === 'assistant') {
-                    lastMessage.content = assistantMessage;
-                  } else {
-                    newMessages.push({ role: 'assistant', content: assistantMessage });
-                  }
-                  return newMessages;
-                });
-              }
-            } catch (e) {
-              console.warn('Failed to parse streaming data:', e);
-            }
-          }
-        }
-      }
-
-      // Update remaining messages count
-      const newRemaining = remainingMessages - 1;
-      setRemainingMessages(newRemaining);
-      localStorage.setItem('habitharmony_remaining_messages', newRemaining.toString());
-
+      setMessages(prev => [
+        ...prev,
+        { id: prev.length + 1, text: aiText, sender: 'ai', time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }
+      ]);
     } catch (error) {
       console.error('Error:', error);
-      setMessages(prev => [...prev, { 
-        role: 'assistant', 
-        content: 'Sorry, I encountered an error. Please try again later.' 
-      }]);
+      setMessages(prev => [
+        ...prev,
+        { id: prev.length + 1, text: 'Sorry, I encountered an error. Please try again later.', sender: 'ai', time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }
+      ]);
     } finally {
       setIsLoading(false);
     }
