@@ -632,36 +632,7 @@ Answer user questions clearly and conversationally, using this data when relevan
     return fullText;
 };
 
-  // Update the updateSuggestions function
-  const updateSuggestions = useCallback(() => {
-    // Only update if we have at least one message
-    if (messages.length > 0) {
-      const newSuggestions = getPersonalizedSuggestions({ 
-        userName, 
-        habitData: getUserHabitData(), 
-        currentMood, 
-        messages 
-      });
-      setSuggestions(prev => {
-        // Only update if there are significant changes
-        if (JSON.stringify(prev) !== JSON.stringify(newSuggestions)) {
-          return newSuggestions;
-        }
-        return prev;
-      });
-    }
-  }, [userName, currentMood, messages]);
-
-  // Remove the automatic suggestions update on component mount
-  useEffect(() => {
-    // Only update suggestions when messages change
-    if (messages.length > 0) {
-      const timeoutId = setTimeout(updateSuggestions, 2000);
-      return () => clearTimeout(timeoutId);
-    }
-  }, [messages.length, updateSuggestions]);
-
-  // Update handleSendMessage to use the API_URL
+  // Update handleSendMessage to handle suggestions after successful message
   const handleSendMessage = async (input) => {
     // Handle both event and direct text input
     const messageText = typeof input === 'string' ? input : input.target?.value || '';
@@ -678,7 +649,7 @@ Answer user questions clearly and conversationally, using this data when relevan
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          message: messageText,
+          messages: [{ role: 'user', content: messageText }],
           stream: true
         }),
       });
@@ -700,19 +671,23 @@ Answer user questions clearly and conversationally, using this data when relevan
 
         for (const line of lines) {
           if (line.startsWith('data: ')) {
-            const data = JSON.parse(line.slice(6));
-            if (data.response) {
-              assistantMessage += data.response;
-              setMessages(prev => {
-                const newMessages = [...prev];
-                const lastMessage = newMessages[newMessages.length - 1];
-                if (lastMessage && lastMessage.role === 'assistant') {
-                  lastMessage.content = assistantMessage;
-                } else {
-                  newMessages.push({ role: 'assistant', content: assistantMessage });
-                }
-                return newMessages;
-              });
+            try {
+              const data = JSON.parse(line.slice(6));
+              if (data.response) {
+                assistantMessage += data.response;
+                setMessages(prev => {
+                  const newMessages = [...prev];
+                  const lastMessage = newMessages[newMessages.length - 1];
+                  if (lastMessage && lastMessage.role === 'assistant') {
+                    lastMessage.content = assistantMessage;
+                  } else {
+                    newMessages.push({ role: 'assistant', content: assistantMessage });
+                  }
+                  return newMessages;
+                });
+              }
+            } catch (e) {
+              console.warn('Failed to parse streaming data:', e);
             }
           }
         }
@@ -723,8 +698,16 @@ Answer user questions clearly and conversationally, using this data when relevan
       setRemainingMessages(newRemaining);
       localStorage.setItem('habitharmony_remaining_messages', newRemaining.toString());
 
-      // Update suggestions after successful message with a delay
-      setTimeout(updateSuggestions, 1000);
+      // Update suggestions only after a successful message exchange
+      if (messages.length > 0) {
+        const newSuggestions = [
+          "Tell me more about that",
+          "How can I apply this?",
+          "What's the next step?",
+          "Can you give me an example?"
+        ];
+        setSuggestions(newSuggestions);
+      }
 
     } catch (error) {
       console.error('Error:', error);
@@ -735,6 +718,12 @@ Answer user questions clearly and conversationally, using this data when relevan
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Update handleSuggestionClick to use simpler suggestion handling
+  const handleSuggestionClick = async (suggestion) => {
+    setInput(suggestion);
+    await handleSendMessage(suggestion);
   };
 
   // Update the onKeyDown handler in the textarea
