@@ -143,9 +143,18 @@ app.post('/api/chat', async (req, res) => {
         }
 
         const data = await geminiResponse.json();
-        console.log('Gemini API raw response:', data);
-        // Extract the response text
-        const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        console.dir(data, { depth: 10 });
+        // Improved extraction: handle various Gemini response shapes
+        let responseText = '';
+        if (data.candidates && data.candidates[0] && data.candidates[0].content) {
+            const parts = data.candidates[0].content.parts;
+            if (Array.isArray(parts) && parts.length > 0 && typeof parts[0].text === 'string') {
+                responseText = parts[0].text;
+            } else if (typeof parts === 'object' && parts.text) {
+                responseText = parts.text;
+            }
+        }
+        if (!responseText) responseText = '[No response from Gemini]';
         res.json({ message: { content: responseText } });
     } catch (error) {
         console.error('Chatbot error:', error);
