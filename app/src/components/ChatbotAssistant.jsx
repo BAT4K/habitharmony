@@ -422,6 +422,9 @@ function getPersonalizedSuggestions({ userName, habitData, currentMood, messages
   return moodSuggestions;
 }
 
+// Add this near the top of the file, after imports
+const API_URL = 'https://habitharmony.onrender.com';
+
 // Main AI Coach Component
 export default function AICoach({ onBack }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -429,16 +432,18 @@ export default function AICoach({ onBack }) {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [remainingMessages, setRemainingMessages] = useState(() => {
-    // Initialize from localStorage or default to 10 for free users
     const stored = localStorage.getItem('habitharmony_remaining_messages');
     return stored ? parseInt(stored, 10) : 10;
   });
+  
+  // Initialize suggestions with static values
   const [suggestions, setSuggestions] = useState([
     "How can I improve my habits?",
     "What's my current streak?",
     "Show me my recent progress",
     "Give me some motivation"
   ]);
+
   const messagesEndRef = useRef(null);
   const [isTyping, setIsTyping] = useState(false);
   const [currentMessage, setCurrentMessage] = useState('');
@@ -627,7 +632,36 @@ Answer user questions clearly and conversationally, using this data when relevan
     return fullText;
 };
 
-  // Modify handleSendMessage to check message limit
+  // Update the updateSuggestions function
+  const updateSuggestions = useCallback(() => {
+    // Only update if we have at least one message
+    if (messages.length > 0) {
+      const newSuggestions = getPersonalizedSuggestions({ 
+        userName, 
+        habitData: getUserHabitData(), 
+        currentMood, 
+        messages 
+      });
+      setSuggestions(prev => {
+        // Only update if there are significant changes
+        if (JSON.stringify(prev) !== JSON.stringify(newSuggestions)) {
+          return newSuggestions;
+        }
+        return prev;
+      });
+    }
+  }, [userName, currentMood, messages]);
+
+  // Remove the automatic suggestions update on component mount
+  useEffect(() => {
+    // Only update suggestions when messages change
+    if (messages.length > 0) {
+      const timeoutId = setTimeout(updateSuggestions, 2000);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [messages.length, updateSuggestions]);
+
+  // Update handleSendMessage to use the API_URL
   const handleSendMessage = async (input) => {
     // Handle both event and direct text input
     const messageText = typeof input === 'string' ? input : input.target?.value || '';
@@ -710,35 +744,6 @@ Answer user questions clearly and conversationally, using this data when relevan
       handleSendMessage(input);
     }
   };
-
-  // Add this function to update suggestions
-  const updateSuggestions = useCallback(() => {
-    // Only update suggestions if we have messages or user data
-    if (messages.length > 0 || userName) {
-      const newSuggestions = getPersonalizedSuggestions({ 
-        userName, 
-        habitData: getUserHabitData(), 
-        currentMood, 
-        messages 
-      });
-      setSuggestions(prev => {
-        // Only update if there are significant changes
-        if (JSON.stringify(prev) !== JSON.stringify(newSuggestions)) {
-          return newSuggestions;
-        }
-        return prev;
-      });
-    }
-  }, [userName, currentMood, messages]);
-
-  // Update the useEffect for suggestions to only run when necessary
-  useEffect(() => {
-    // Only set up the interval if we have messages or user data
-    if (messages.length > 0 || userName) {
-      const timeoutId = setTimeout(updateSuggestions, 2000); // Increased debounce to 2 seconds
-      return () => clearTimeout(timeoutId);
-    }
-  }, [updateSuggestions, messages.length, userName]);
 
   // Handle quick suggestion clicks
   const handleSuggestionClick = async (suggestion) => {
