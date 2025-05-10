@@ -8,6 +8,10 @@ RUN apt-get update && apt-get install -y \
 # Install Ollama
 RUN curl -fsSL https://ollama.com/install.sh | sh
 
+# Set environment variables
+ENV OLLAMA_HOST=0.0.0.0:11434
+ENV OLLAMA_ORIGINS="*"
+
 # Expose Ollama port
 EXPOSE 11434
 
