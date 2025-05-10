@@ -5,6 +5,7 @@ import maradImg from '../assets/marad.png';
 import auratImg from '../assets/aurat.png';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
+import axios from 'axios';
 
 // Add this after the imports and before the habits array:
 const customDatePickerStyles = {
@@ -217,31 +218,41 @@ const ModernSignup = () => {
   };
   
   // Handle form submission (final step)
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     setIsSubmitting(true);
-    // Save selected habits to localStorage
-    localStorage.setItem('habitharmony_user_habits', JSON.stringify(
-      habits.filter(h => formData.habits.includes(h.id))
-    ));
-    // Save user's first name for greeting
-    localStorage.setItem('habitharmony_user_name', formData.firstName);
-    // Reset all progress-related localStorage keys
-    localStorage.setItem('habitharmony_points', '0');
-    localStorage.setItem('habitharmony_streak', '0');
-    localStorage.setItem('habitharmony_points_today', JSON.stringify({ date: '', points: 0 }));
-    localStorage.setItem('habitharmony_last_streak_date', '');
-    localStorage.setItem('habitharmony_calendar_history', '{}');
-    localStorage.setItem('habitharmony_habitPoints', '{}');
-    // Simulate API call
-    setTimeout(() => {
-      console.log('Form submitted:', formData);
-      // Store user data or token if needed
-      // localStorage.setItem('token', 'sample-token');
-      // When using real API, store user._id in localStorage:
-      // localStorage.setItem('habitharmony_user_id', response.data.user._id);
+    try {
+      // Call your backend API
+      const response = await axios.post('https://habitharmony.onrender.com/api/auth/register', {
+        name: formData.firstName,
+        surname: formData.lastName,
+        birthdate: formData.birthdate,
+        email: formData.email,
+        password: formData.password,
+        gender: formData.gender,
+        habits: formData.habits, // or map to habit names if needed
+      });
+      // Store the token
+      localStorage.setItem('token', response.data.token);
+      // Optionally store user info
+      localStorage.setItem('habitharmony_user', JSON.stringify(response.data.user));
+      // Save selected habits to localStorage (existing logic)
+      localStorage.setItem('habitharmony_user_habits', JSON.stringify(
+        habits.filter(h => formData.habits.includes(h.id))
+      ));
+      localStorage.setItem('habitharmony_user_name', formData.firstName);
+      localStorage.setItem('habitharmony_points', '0');
+      localStorage.setItem('habitharmony_streak', '0');
+      localStorage.setItem('habitharmony_points_today', JSON.stringify({ date: '', points: 0 }));
+      localStorage.setItem('habitharmony_last_streak_date', '');
+      localStorage.setItem('habitharmony_calendar_history', '{}');
+      localStorage.setItem('habitharmony_habitPoints', '{}');
       // Navigate to homescreen
       navigate('/homescreen');
-    }, 1000);
+    } catch (error) {
+      alert(error.response?.data?.message || 'Registration failed');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
   
   // Gender selection handler
