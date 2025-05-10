@@ -12,7 +12,15 @@ RUN curl -fsSL https://ollama.com/install.sh | sh
 
 # Create app directory and health check server
 RUN mkdir -p /app && \
-    echo 'from flask import Flask; app = Flask(__name__); @app.route("/api/health"); def health(): return {"status": "healthy", "ollama": "running"}; if __name__ == "__main__": app.run(host="0.0.0.0", port=5000)' > /app/health.py
+    echo 'from flask import Flask\n\
+app = Flask(__name__)\n\
+\n\
+@app.route("/api/health")\n\
+def health():\n\
+    return {"status": "healthy", "ollama": "running"}\n\
+\n\
+if __name__ == "__main__":\n\
+    app.run(host="0.0.0.0", port=5000)' > /app/health.py
 
 # Install Flask
 RUN pip3 install flask
