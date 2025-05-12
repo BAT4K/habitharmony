@@ -116,8 +116,10 @@ const ProfilePage = () => {
   const logOut = () => {
     // Clear all user data
     localStorage.clear();
-    // Redirect to login
-    navigate('/login');
+    // Remove token specifically
+    localStorage.removeItem('token');
+    // Redirect to login with a flag to prevent auto-login
+    navigate('/login', { state: { fromLogout: true } });
   };
 
   // Handle profile update

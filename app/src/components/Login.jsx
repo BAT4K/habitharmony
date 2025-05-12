@@ -41,8 +41,14 @@ const Login = () => {
                 throw new Error("Invalid server response - no token found");
             }
 
-            // Always save to localStorage for persistence
+            // Clear any existing data before setting new token
+            localStorage.clear();
+            
+            // Save token and user data
             localStorage.setItem('token', token);
+            if (response.user) {
+                localStorage.setItem('habitharmony_user', JSON.stringify(response.user));
+            }
             
             // Add success animation before navigating
             setTimeout(() => {
@@ -68,8 +74,17 @@ const Login = () => {
         const token = localStorage.getItem('token');
         
         if (token) {
-            console.log("[Login Component] Token found, navigating to /homescreen");
-            navigate('/homescreen');
+            // Verify token validity with backend
+            api.verifyToken(token)
+                .then(() => {
+                    console.log("[Login Component] Valid token found, navigating to /homescreen");
+                    navigate('/homescreen');
+                })
+                .catch(() => {
+                    console.log("[Login Component] Invalid token found, clearing storage");
+                    localStorage.clear();
+                    setCheckingToken(false);
+                });
         } else {
             console.log("[Login Component] No token found");
             setCheckingToken(false);
@@ -85,6 +100,8 @@ const Login = () => {
     }
 
     const handleBack = () => {
+        // Clear any existing token when going back
+        localStorage.removeItem('token');
         navigate('/');
     };
 

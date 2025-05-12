@@ -229,16 +229,22 @@ const ModernSignup = () => {
         email: formData.email,
         password: formData.password,
         gender: formData.gender,
-        habits: formData.habits, // or map to habit names if needed
+        habits: formData.habits,
       });
-      // Store the token
+
+      // Clear any existing data
+      localStorage.clear();
+      
+      // Store the token and user data
       localStorage.setItem('token', response.data.token);
-      // Optionally store user info
       localStorage.setItem('habitharmony_user', JSON.stringify(response.data.user));
-      // Save selected habits to localStorage (existing logic)
+      
+      // Save selected habits to localStorage
       localStorage.setItem('habitharmony_user_habits', JSON.stringify(
         habits.filter(h => formData.habits.includes(h.id))
       ));
+      
+      // Set initial user data
       localStorage.setItem('habitharmony_user_name', formData.firstName);
       localStorage.setItem('habitharmony_points', '0');
       localStorage.setItem('habitharmony_streak', '0');
@@ -246,6 +252,7 @@ const ModernSignup = () => {
       localStorage.setItem('habitharmony_last_streak_date', '');
       localStorage.setItem('habitharmony_calendar_history', '{}');
       localStorage.setItem('habitharmony_habitPoints', '{}');
+      
       // Navigate to homescreen
       navigate('/homescreen');
     } catch (error) {
