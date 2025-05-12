@@ -221,25 +221,18 @@ const ModernSignup = () => {
   const handleSubmit = async () => {
     setIsSubmitting(true);
     try {
-        // Prepare habits data
-        const selectedHabits = habits
-            .filter(h => formData.habits.includes(h.id))
-            .map(h => ({
-                id: h.id,
-                name: h.name,
-                icon: h.icon,
-                streak: 0
-            }));
+        // Prepare habits data - just send the habit IDs
+        const selectedHabitIds = formData.habits;
 
         // Call your backend API
         const response = await axios.post('https://habitharmony.onrender.com/api/auth/register', {
-            name: formData.firstName,
-            surname: formData.lastName,
+            firstName: formData.firstName,
+            lastName: formData.lastName,
             birthdate: formData.birthdate,
             email: formData.email,
             password: formData.password,
             gender: formData.gender,
-            habits: selectedHabits,
+            habits: selectedHabitIds
         });
 
         // Clear any existing data
@@ -249,7 +242,15 @@ const ModernSignup = () => {
         localStorage.setItem('token', response.data.token);
         localStorage.setItem('habitharmony_user', JSON.stringify(response.data.user));
         
-        // Save selected habits to localStorage
+        // Save selected habits to localStorage with full habit data
+        const selectedHabits = habits
+            .filter(h => selectedHabitIds.includes(h.id))
+            .map(h => ({
+                id: h.id,
+                name: h.name,
+                icon: h.icon,
+                streak: 0
+            }));
         localStorage.setItem('habitharmony_user_habits', JSON.stringify(selectedHabits));
         
         // Set initial user data
@@ -264,7 +265,8 @@ const ModernSignup = () => {
         // Navigate to homescreen
         navigate('/homescreen');
     } catch (error) {
-        alert(error.response?.data?.message || 'Registration failed');
+        console.error('Registration error:', error);
+        alert(error.response?.data?.message || 'Registration failed. Please try again.');
     } finally {
         setIsSubmitting(false);
     }

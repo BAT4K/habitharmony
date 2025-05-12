@@ -13,9 +13,25 @@ const Login = () => {
     });
     const [error, setError] = useState('');
     const [checkingToken, setCheckingToken] = useState(true);
-    const [isFromLogout, setIsFromLogout] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [fieldFocus, setFieldFocus] = useState({ email: false, password: false });
+
+    // Clear all data when component mounts
+    useEffect(() => {
+        const clearAllData = () => {
+            localStorage.clear();
+            sessionStorage.clear();
+        };
+        clearAllData();
+        setCheckingToken(false);
+    }, []);
+
+    const handleBack = () => {
+        // Clear all data when going back
+        localStorage.clear();
+        sessionStorage.clear();
+        navigate('/');
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -42,6 +58,7 @@ const Login = () => {
 
             // Clear any existing data
             localStorage.clear();
+            sessionStorage.clear();
             
             // Save token and user data
             localStorage.setItem('token', token);
@@ -66,13 +83,6 @@ const Login = () => {
         }
     };
 
-    useEffect(() => {
-        // Always clear token and user data when entering login page
-        localStorage.removeItem('token');
-        localStorage.removeItem('habitharmony_user');
-        setCheckingToken(false);
-    }, []);
-
     if (checkingToken) {
         return (
             <div className="fixed inset-0 flex items-center justify-center bg-white">
@@ -80,12 +90,6 @@ const Login = () => {
             </div>
         );
     }
-
-    const handleBack = () => {
-        // Clear any existing token when going back
-        localStorage.removeItem('token');
-        navigate('/');
-    };
 
     const handleFocus = (field) => {
         setFieldFocus({ ...fieldFocus, [field]: true });
