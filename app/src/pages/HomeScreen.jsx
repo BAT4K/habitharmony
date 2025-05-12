@@ -596,6 +596,19 @@ const HomeScreen = () => {
     return () => document.body.classList.remove('celebration-blur');
   }, [selectedDay]);
 
+  // Sync habits state with localStorage whenever localStorage changes (e.g., after login/signup)
+  useEffect(() => {
+    const syncHabits = () => {
+      const stored = localStorage.getItem('habitharmony_user_habits');
+      if (stored) {
+        setHabits(JSON.parse(stored).map(h => ({ ...h, completed: false, streak: h.streak || 0 })));
+      }
+    };
+    window.addEventListener('storage', syncHabits);
+    syncHabits();
+    return () => window.removeEventListener('storage', syncHabits);
+  }, []);
+
   return (
     <div className="min-h-screen font-display bg-[#F8F3F3] pb-24 relative overflow-y-auto">
       {/* Header - Sticky */}

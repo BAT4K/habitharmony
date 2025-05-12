@@ -38,7 +38,12 @@ router.post('/register', async (req, res) => {
             user: {
                 id: user._id,
                 name: user.name,
-                email: user.email
+                surname: user.surname,
+                email: user.email,
+                gender: user.gender,
+                birthdate: user.birthdate,
+                habits: user.habits,
+                premium: user.premium
             }
         });
     } catch (error) {
@@ -75,7 +80,12 @@ router.post('/login', async (req, res) => {
             user: {
                 id: user._id,
                 name: user.name,
-                email: user.email
+                surname: user.surname,
+                email: user.email,
+                gender: user.gender,
+                birthdate: user.birthdate,
+                habits: user.habits,
+                premium: user.premium
             }
         });
     } catch (error) {
