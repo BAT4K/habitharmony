@@ -269,19 +269,13 @@ const ModernSignup = () => {
     try {
         // Format the data exactly as the server expects
         const signupData = {
-            firstName: formData.firstName.trim(),
-            lastName: formData.lastName.trim(),
+            name: formData.firstName.trim(),
+            surname: formData.lastName.trim(),
             email: formData.email.trim().toLowerCase(),
             password: formData.password,
             gender: formData.gender,
             birthdate: formData.birthdate,
-            habits: formData.habits.map(habitId => {
-                const habit = habits.find(h => h.id === habitId);
-                return {
-                    name: habit.name,
-                    icon: habit.icon
-                };
-            })
+            habits: formData.habits // Just send the habit IDs as strings
         };
 
         console.log('Sending signup data:', signupData);
