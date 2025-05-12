@@ -221,44 +221,52 @@ const ModernSignup = () => {
   const handleSubmit = async () => {
     setIsSubmitting(true);
     try {
-      // Call your backend API
-      const response = await axios.post('https://habitharmony.onrender.com/api/auth/register', {
-        name: formData.firstName,
-        surname: formData.lastName,
-        birthdate: formData.birthdate,
-        email: formData.email,
-        password: formData.password,
-        gender: formData.gender,
-        habits: formData.habits,
-      });
+        // Prepare habits data
+        const selectedHabits = habits
+            .filter(h => formData.habits.includes(h.id))
+            .map(h => ({
+                id: h.id,
+                name: h.name,
+                icon: h.icon,
+                streak: 0
+            }));
 
-      // Clear any existing data
-      localStorage.clear();
-      
-      // Store the token and user data
-      localStorage.setItem('token', response.data.token);
-      localStorage.setItem('habitharmony_user', JSON.stringify(response.data.user));
-      
-      // Save selected habits to localStorage
-      localStorage.setItem('habitharmony_user_habits', JSON.stringify(
-        habits.filter(h => formData.habits.includes(h.id))
-      ));
-      
-      // Set initial user data
-      localStorage.setItem('habitharmony_user_name', formData.firstName);
-      localStorage.setItem('habitharmony_points', '0');
-      localStorage.setItem('habitharmony_streak', '0');
-      localStorage.setItem('habitharmony_points_today', JSON.stringify({ date: '', points: 0 }));
-      localStorage.setItem('habitharmony_last_streak_date', '');
-      localStorage.setItem('habitharmony_calendar_history', '{}');
-      localStorage.setItem('habitharmony_habitPoints', '{}');
-      
-      // Navigate to homescreen
-      navigate('/homescreen');
+        // Call your backend API
+        const response = await axios.post('https://habitharmony.onrender.com/api/auth/register', {
+            name: formData.firstName,
+            surname: formData.lastName,
+            birthdate: formData.birthdate,
+            email: formData.email,
+            password: formData.password,
+            gender: formData.gender,
+            habits: selectedHabits,
+        });
+
+        // Clear any existing data
+        localStorage.clear();
+        
+        // Store the token and user data
+        localStorage.setItem('token', response.data.token);
+        localStorage.setItem('habitharmony_user', JSON.stringify(response.data.user));
+        
+        // Save selected habits to localStorage
+        localStorage.setItem('habitharmony_user_habits', JSON.stringify(selectedHabits));
+        
+        // Set initial user data
+        localStorage.setItem('habitharmony_user_name', formData.firstName);
+        localStorage.setItem('habitharmony_points', '0');
+        localStorage.setItem('habitharmony_streak', '0');
+        localStorage.setItem('habitharmony_points_today', JSON.stringify({ date: '', points: 0 }));
+        localStorage.setItem('habitharmony_last_streak_date', '');
+        localStorage.setItem('habitharmony_calendar_history', '{}');
+        localStorage.setItem('habitharmony_habitPoints', '{}');
+        
+        // Navigate to homescreen
+        navigate('/homescreen');
     } catch (error) {
-      alert(error.response?.data?.message || 'Registration failed');
+        alert(error.response?.data?.message || 'Registration failed');
     } finally {
-      setIsSubmitting(false);
+        setIsSubmitting(false);
     }
   };
   

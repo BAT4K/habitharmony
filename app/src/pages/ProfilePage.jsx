@@ -12,7 +12,10 @@ import { UPGRADE_FEATURES, UPGRADE_PRICES, UPGRADE_MESSAGE_LIMIT, getUserName, g
 
 const ProfilePage = () => {
   const navigate = useNavigate();
-  const [userName, setUserName] = useState(() => getUserName());
+  const [userName, setUserName] = useState(() => {
+    const user = JSON.parse(localStorage.getItem('habitharmony_user') || '{}');
+    return user.name || user.firstName || localStorage.getItem('habitharmony_user_name') || 'User';
+  });
   const [avatar, setAvatar] = useState(() => localStorage.getItem('habitharmony_avatar') || maradImg);
   const [userBio, setUserBio] = useState(() => localStorage.getItem('habitharmony_user_bio') || 'Trying to build better habits daily!');
   const [userPoints, setUserPoints] = useState(() => parseInt(localStorage.getItem('habitharmony_points') || '0', 10));
@@ -26,7 +29,6 @@ const ProfilePage = () => {
     return Object.values(history).reduce((acc, arr) => acc + (Array.isArray(arr) ? arr.length : 0), 0);
   });
   const [longestStreak, setLongestStreak] = useState(() => {
-    // Calculate longest streak from habit data
     try {
       const habits = JSON.parse(localStorage.getItem('habitharmony_user_habits') || '[]');
       return habits.reduce((max, h) => Math.max(max, h.streak || 0), 0);
@@ -54,7 +56,8 @@ const ProfilePage = () => {
   // Sync all data with localStorage
   useEffect(() => {
     const syncProfile = () => {
-      setUserName(getUserName());
+      const user = JSON.parse(localStorage.getItem('habitharmony_user') || '{}');
+      setUserName(user.name || user.firstName || localStorage.getItem('habitharmony_user_name') || 'User');
       setAvatar(localStorage.getItem('habitharmony_avatar') || maradImg);
       setUserBio(localStorage.getItem('habitharmony_user_bio') || 'Trying to build better habits daily!');
       setUserPoints(parseInt(localStorage.getItem('habitharmony_points') || '0', 10));
@@ -62,7 +65,6 @@ const ProfilePage = () => {
       const history = JSON.parse(localStorage.getItem('habitharmony_calendar_history') || '{}');
       setDaysActive(Object.keys(history).length);
       setTotalHabitsCompleted(Object.values(history).reduce((acc, arr) => acc + (Array.isArray(arr) ? arr.length : 0), 0));
-      // Longest streak from habits
       try {
         const habits = JSON.parse(localStorage.getItem('habitharmony_user_habits') || '[]');
         setLongestStreak(habits.reduce((max, h) => Math.max(max, h.streak || 0), 0));

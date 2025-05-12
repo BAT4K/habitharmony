@@ -27,27 +27,31 @@ const Login = () => {
             const response = await api.login(formData);
             console.log("[Login Component] Login successful, response:", response);
             
-            // Extract token correctly based on your API response structure
-            let token;
+            // Extract token and user data
+            let token, userData;
             
             if (response.token) {
                 token = response.token;
-            } else if (response.data && response.data.token) {
+                userData = response.user;
+            } else if (response.data) {
                 token = response.data.token;
-            } else if (typeof response === 'string') {
-                token = response;
+                userData = response.data.user;
             } else {
-                console.error("[Login Component] Could not find token in response:", response);
                 throw new Error("Invalid server response - no token found");
             }
 
-            // Clear any existing data before setting new token
+            // Clear any existing data
             localStorage.clear();
             
             // Save token and user data
             localStorage.setItem('token', token);
-            if (response.user) {
-                localStorage.setItem('habitharmony_user', JSON.stringify(response.user));
+            if (userData) {
+                localStorage.setItem('habitharmony_user', JSON.stringify(userData));
+                localStorage.setItem('habitharmony_user_name', userData.name || userData.firstName);
+                // Store habits if they exist in user data
+                if (userData.habits) {
+                    localStorage.setItem('habitharmony_user_habits', JSON.stringify(userData.habits));
+                }
             }
             
             // Add success animation before navigating
@@ -63,33 +67,11 @@ const Login = () => {
     };
 
     useEffect(() => {
-        // Check if this login page was accessed after logout
-        if (location.state && location.state.fromLogout) {
-            setIsFromLogout(true);
-            setCheckingToken(false);
-            return;
-        }
-
-        // Check for token
-        const token = localStorage.getItem('token');
-        
-        if (token) {
-            // Verify token validity with backend
-            api.verifyToken(token)
-                .then(() => {
-                    console.log("[Login Component] Valid token found, navigating to /homescreen");
-                    navigate('/homescreen');
-                })
-                .catch(() => {
-                    console.log("[Login Component] Invalid token found, clearing storage");
-                    localStorage.clear();
-                    setCheckingToken(false);
-                });
-        } else {
-            console.log("[Login Component] No token found");
-            setCheckingToken(false);
-        }
-    }, [navigate, location]);
+        // Always clear token and user data when entering login page
+        localStorage.removeItem('token');
+        localStorage.removeItem('habitharmony_user');
+        setCheckingToken(false);
+    }, []);
 
     if (checkingToken) {
         return (
