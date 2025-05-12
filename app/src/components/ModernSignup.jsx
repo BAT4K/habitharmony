@@ -217,23 +217,77 @@ const ModernSignup = () => {
     }
   };
   
+  // Validate form
+  const validateForm = () => {
+    const errors = {};
+    
+    if (!formData.firstName?.trim()) {
+        errors.firstName = 'First name is required';
+    }
+    
+    if (!formData.lastName?.trim()) {
+        errors.lastName = 'Last name is required';
+    }
+    
+    if (!formData.email?.trim()) {
+        errors.email = 'Email is required';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+        errors.email = 'Please enter a valid email address';
+    }
+    
+    if (!formData.password) {
+        errors.password = 'Password is required';
+    } else if (formData.password.length < 8) {
+        errors.password = 'Password must be at least 8 characters';
+    }
+    
+    if (!formData.birthdate) {
+        errors.birthdate = 'Date of birth is required';
+    }
+    
+    if (!formData.gender) {
+        errors.gender = 'Gender is required';
+    }
+    
+    if (!formData.habits?.length) {
+        errors.habits = 'Please select at least one habit';
+    }
+    
+    return errors;
+  };
+  
   // Handle form submission (final step)
   const handleSubmit = async () => {
+    // Validate form first
+    const validationErrors = validateForm();
+    if (Object.keys(validationErrors).length > 0) {
+        setErrors(validationErrors);
+        return;
+    }
+
     setIsSubmitting(true);
     try {
-        // Prepare habits data - just send the habit IDs
-        const selectedHabitIds = formData.habits;
-
-        // Call your backend API
-        const response = await axios.post('https://habitharmony.onrender.com/api/auth/register', {
-            firstName: formData.firstName,
-            lastName: formData.lastName,
-            birthdate: formData.birthdate,
-            email: formData.email,
+        // Format the data exactly as the server expects
+        const signupData = {
+            firstName: formData.firstName.trim(),
+            lastName: formData.lastName.trim(),
+            email: formData.email.trim().toLowerCase(),
             password: formData.password,
             gender: formData.gender,
-            habits: selectedHabitIds
-        });
+            birthdate: formData.birthdate,
+            habits: formData.habits.map(habitId => {
+                const habit = habits.find(h => h.id === habitId);
+                return {
+                    name: habit.name,
+                    icon: habit.icon
+                };
+            })
+        };
+
+        console.log('Sending signup data:', signupData);
+
+        // Call your backend API
+        const response = await axios.post('https://habitharmony.onrender.com/api/auth/register', signupData);
 
         // Clear any existing data
         localStorage.clear();
@@ -244,7 +298,7 @@ const ModernSignup = () => {
         
         // Save selected habits to localStorage with full habit data
         const selectedHabits = habits
-            .filter(h => selectedHabitIds.includes(h.id))
+            .filter(h => formData.habits.includes(h.id))
             .map(h => ({
                 id: h.id,
                 name: h.name,
@@ -266,6 +320,7 @@ const ModernSignup = () => {
         navigate('/homescreen');
     } catch (error) {
         console.error('Registration error:', error);
+        console.error('Error details:', error.response?.data);
         alert(error.response?.data?.message || 'Registration failed. Please try again.');
     } finally {
         setIsSubmitting(false);
