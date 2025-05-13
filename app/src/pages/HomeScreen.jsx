@@ -227,6 +227,14 @@ const HomeScreen = () => {
   const isPremium = localStorage.getItem('habitharmony_premium') === 'true';
   const [currentTheme, setCurrentTheme] = useState(() => localStorage.getItem('habitharmony_theme') || 'light');
 
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      navigate('/login');
+    }
+  }, [navigate]);
+
   // Blur navbar when edit modal is open
   useEffect(() => {
     if (showCelebration || showEditHabits) {

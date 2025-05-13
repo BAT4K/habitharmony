@@ -291,15 +291,20 @@ const ModernSignup = () => {
         localStorage.setItem('habitharmony_user', JSON.stringify(response.data.user));
         
         // Save selected habits to localStorage with full habit data
-        const selectedHabits = habits
-            .filter(h => formData.habits.includes(h.id))
-            .map(h => ({
-                id: h.id,
-                name: h.name,
-                icon: h.icon,
-                streak: 0
-            }));
-        localStorage.setItem('habitharmony_user_habits', JSON.stringify(selectedHabits));
+        const predefinedHabits = [
+            { id: 'habit1', name: 'Drink Water', icon: '🚰', unit: 'cups', target: 8 },
+            { id: 'habit2', name: 'Exercise', icon: '🏋️', unit: 'min', target: 30 },
+            { id: 'habit3', name: 'Reading', icon: '📚', unit: 'min', target: 30 },
+            { id: 'habit4', name: 'Studying', icon: '📖', unit: 'min', target: 60 },
+            { id: 'habit5', name: 'Cooking', icon: '🍳', unit: 'meals', target: 1 },
+            { id: 'habit6', name: 'Gardening', icon: '🌱', unit: 'min', target: 20 },
+            { id: 'habit7', name: 'Meditation', icon: '🧘', unit: 'min', target: 10 },
+            { id: 'habit8', name: 'Coding', icon: '💻', unit: 'min', target: 45 }
+        ];
+        const userHabits = response.data.user.habits.map(habitNameOrId =>
+            predefinedHabits.find(h => h.id === habitNameOrId || h.name === habitNameOrId)
+        ).filter(Boolean);
+        localStorage.setItem('habitharmony_user_habits', JSON.stringify(userHabits));
         
         // Set initial user data
         localStorage.setItem('habitharmony_user_name', formData.firstName);
