@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import Profile from "../assets/ProfilePicture.png";
+import Profile from "../assets/ProfilePicture.webp";
 import { Award, Settings, NotebookPen, LogOut } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import api from '../services/api';

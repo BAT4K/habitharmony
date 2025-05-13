@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronRight, ChevronLeft, Check, Plus, Award, X } from 'lucide-react';
 import { motion, AnimatePresence } from "framer-motion";
-import Walk from "../assets/Walk.png";
-import Read from "../assets/Read.png";
-import Swim from "../assets/Swim.png";
+import Walk from "../assets/Walk.webp";
+import Read from "../assets/Read.webp";
+import Swim from "../assets/Swim.webp";
 
 const ActivitySection = () => {
   // Sample initial activities data

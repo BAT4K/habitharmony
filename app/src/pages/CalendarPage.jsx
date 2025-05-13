@@ -5,7 +5,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from 'react-router-dom';
-import maradImg from '../assets/marad.png';
+import maradImg from '../assets/marad.webp';
 
 // Constants from HomeScreen
 const HABITS_STORAGE_KEY = 'habitharmony_user_habits';

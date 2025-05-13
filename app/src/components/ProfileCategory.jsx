@@ -1,8 +1,8 @@
 import React, { useState } from "react";
-import Filter from "../assets/Filter.png";
+import Filter from "../assets/Filter.webp";
 import ProfileActivity from "./ProfileActivity";
-import Add from "../assets/AddButton.png";
-import Edit from "../assets/EditButton.png";
+import Add from "../assets/AddButton.webp";
+import Edit from "../assets/EditButton.webp";
 import FriendsCard from "./FriendsCard";
 import AchievementCard from "./AchievementCard";
 

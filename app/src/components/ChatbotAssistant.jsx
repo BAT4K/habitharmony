@@ -7,7 +7,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
-import maradImg from '../assets/marad.png';
+import maradImg from '../assets/marad.webp';
 import ReactMarkdown from 'react-markdown';
 
 // Robust helper to normalize API base URL (removes trailing /api or /)

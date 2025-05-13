@@ -1,6 +1,6 @@
 import React from "react";
-import Delete from "../assets/DeleteButton.png";
-import Profile from "../assets/ProfilePicture.png";
+import Delete from "../assets/DeleteButton.webp";
+import Profile from "../assets/ProfilePicture.webp";
 
 const FriendsCard = () => {
   return (

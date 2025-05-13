@@ -1,5 +1,5 @@
 import React from "react";
-import bgImage from "../assets/badgeScreen.png";
+import bgImage from "../assets/badgeScreen.webp";
 import { ChevronLeft } from "lucide-react";
 
 const BadgePage = () => {

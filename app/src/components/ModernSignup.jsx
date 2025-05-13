@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, Eye, EyeOff } from 'lucide-react';
-import maradImg from '../assets/marad.png';
-import auratImg from '../assets/aurat.png';
+import maradImg from '../assets/marad.webp';
+import auratImg from '../assets/aurat.webp';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import axios from 'axios';

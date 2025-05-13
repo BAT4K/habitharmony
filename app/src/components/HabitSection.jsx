@@ -2,8 +2,8 @@ import React, { useState, useEffect, useRef } from "react";
 import { ChevronLeft, ChevronRight, Award, Filter } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import HabitCard from "./HabitCard";
-import bottle from "../assets/bottle.png";
-import trophy from "../assets/Trophy.png";
+import bottle from "../assets/bottle.webp";
+import trophy from "../assets/Trophy.webp";
 
 const HabitSection = () => {
   // Use localStorage to persist habits

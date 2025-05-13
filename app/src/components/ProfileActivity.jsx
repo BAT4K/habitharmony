@@ -1,7 +1,7 @@
 import React from "react";
-import Pos from "../assets/PositiveAct.png";
-import Neg from "../assets/NegativeAct.png";
-import AwardAct from "../assets/AwardAct.png";
+import Pos from "../assets/PositiveAct.webp";
+import Neg from "../assets/NegativeAct.webp";
+import AwardAct from "../assets/AwardAct.webp";
 
 const ProfileActivity = ({ act }) => {
   return (

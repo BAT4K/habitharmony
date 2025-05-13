@@ -5,8 +5,8 @@ import {
   Zap, ArrowRight, Calendar as CalendarIcon, User, X, Pencil, Moon, LogOut, Edit, Award, Settings
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import maradImg from '../assets/marad.png';
-import auratImg from '../assets/aurat.png';
+import maradImg from '../assets/marad.webp';
+import auratImg from '../assets/aurat.webp';
 import { useNavigate } from 'react-router-dom';
 import { UPGRADE_FEATURES, UPGRADE_PRICES, getRemainingMessages, openRazorpay } from '../utils/upgradeInfo';
 

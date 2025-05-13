@@ -14,7 +14,7 @@ import { useSocket } from '../hooks/useSocket';
 import { useAuth } from '../contexts/AuthContext';
 import { ProgressRing } from '../components/ProgressRing';
 import { formatDistanceToNow } from 'date-fns';
-import maradImg from '../assets/marad.png';
+import maradImg from '../assets/marad.webp';
 import { useNavigate } from 'react-router-dom';
 
 const tabClasses = (active) =>

@@ -1,17 +1,17 @@
 import React from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import General from "../assets/General.png";
-import Dark from "../assets/DarkMode.png";
+import General from "../assets/General.webp";
+import Dark from "../assets/DarkMode.webp";
 import Toggle from "../components/Toggle";
-import Security from "../assets/Security.png";
-import Notification from "../assets/Notification.png";
-import Sound from "../assets/Sound.png";
-import Play from "../assets/Play.png";
-import Star from "../assets/Star.png";
-import Share from "../assets/Share.png";
-import Premium from "../assets/Premium.png";
-import Info from "../assets/Info.png";
-import Chat from "../assets/Chat.png";
+import Security from "../assets/Security.webp";
+import Notification from "../assets/Notification.webp";
+import Sound from "../assets/Sound.webp";
+import Play from "../assets/Play.webp";
+import Star from "../assets/Star.webp";
+import Share from "../assets/Share.webp";
+import Premium from "../assets/Premium.webp";
+import Info from "../assets/Info.webp";
+import Chat from "../assets/Chat.webp";
 import { useNavigate } from "react-router-dom";
 
 const SettingsPage = () => {
