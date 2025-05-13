@@ -191,7 +191,7 @@ const HomeScreen = () => {
   const [showEditHabits, setShowEditHabits] = useState(false);
   const [userPoints, setUserPoints] = useState(() => {
     const stored = localStorage.getItem(POINTS_STORAGE_KEY);
-    return stored ? parseInt(stored, 10) : 1420;
+    return stored ? parseInt(stored, 10) : 0;
   });
   const [habitPoints, setHabitPoints] = useState(() => {
     const stored = localStorage.getItem('habitharmony_habitPoints');
@@ -315,6 +315,7 @@ const HomeScreen = () => {
     let pointsDelta = 0;
     let willHitStreak = false;
     let nextStreakValue = userStreak;
+    const today = getTodayStr();
     const updatedHabits = habits.map(h => {
       if (h.id === habitId) {
         const nowCompleted = !h.completed;
@@ -336,13 +337,32 @@ const HomeScreen = () => {
       return h;
     });
     setHabits(updatedHabits);
-    localStorage.setItem(HABITS_STORAGE_KEY, JSON.stringify(updatedHabits));
+    // Only update calendarHistory for completions
+    const completedHabits = updatedHabits.filter(h => h.completed).map(h => h.id);
+    setCalendarHistory(prev => {
+      const updated = { ...prev, [today]: completedHabits };
+      localStorage.setItem(CALENDAR_HISTORY_KEY, JSON.stringify(updated));
+      return updated;
+    });
 
     // Update points and habitPoints
     setUserPoints(prev => {
       let newPoints = prev + pointsDelta;
       if (newPoints < 0) newPoints = 0;
       localStorage.setItem(POINTS_STORAGE_KEY, newPoints);
+      // Sync points and streak with backend
+      try {
+        const user = JSON.parse(localStorage.getItem('habitharmony_user'));
+        fetch('https://habitharmony.onrender.com/api/auth/update-stats', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: user.id,
+            points: newPoints,
+            streak: userStreak // use the latest streak value
+          })
+        });
+      } catch (e) { /* ignore errors for now */ }
       return newPoints;
     });
     setHabitPoints(prev => {
@@ -374,6 +394,19 @@ const HomeScreen = () => {
         setUserStreak(prev => {
           const newStreak = prev + 1;
           localStorage.setItem(STREAK_STORAGE_KEY, newStreak);
+          // Sync points and streak with backend
+          try {
+            const user = JSON.parse(localStorage.getItem('habitharmony_user'));
+            fetch('https://habitharmony.onrender.com/api/auth/update-stats', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                userId: user.id,
+                points: userPoints,
+                streak: newStreak
+              })
+            });
+          } catch (e) { /* ignore errors for now */ }
           return newStreak;
         });
         setLastStreakDate(today);
@@ -401,14 +434,6 @@ const HomeScreen = () => {
       setShowCelebration(true);
       setTimeout(() => setShowCelebration(false), 2000);
     }
-
-    // Persist completed state for today in calendar history
-    const completedHabits = updatedHabits.filter(h => h.completed).map(h => h.id);
-    setCalendarHistory(prev => {
-      const updated = { ...prev, [today]: completedHabits };
-      localStorage.setItem(CALENDAR_HISTORY_KEY, JSON.stringify(updated));
-      return updated;
-    });
   }
 
   // Add predefined habit

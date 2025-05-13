@@ -36,6 +36,10 @@ const userSchema = new mongoose.Schema({
         type: String,
         required: true
     }],
+    points: {
+        type: Number,
+        default: 0
+    },
     premium: {
         type: Boolean,
         default: false

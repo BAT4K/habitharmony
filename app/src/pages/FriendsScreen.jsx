@@ -38,8 +38,8 @@ const FriendsScreen = () => {
   const [currentTheme, setCurrentTheme] = useState(() => localStorage.getItem('habitharmony_theme') || 'light');
   const isPremium = localStorage.getItem('habitharmony_premium') === 'true';
   const navigate = useNavigate();
-  const userPoints = user?.points || 0;
-  const userStreak = user?.streak || 0;
+  const [userPoints, setUserPoints] = useState(() => parseInt(localStorage.getItem('habitharmony_points') || '0', 10));
+  const [userStreak, setUserStreak] = useState(() => parseInt(localStorage.getItem('habitharmony_streak') || '0', 10));
 
   const {
     friends,
@@ -91,6 +91,17 @@ const FriendsScreen = () => {
   } = useActivity(user?.id);
 
   const socket = useSocket(user?.id);
+
+  // Sync userPoints and userStreak with localStorage in real time
+  useEffect(() => {
+    const syncStats = () => {
+      setUserPoints(parseInt(localStorage.getItem('habitharmony_points') || '0', 10));
+      setUserStreak(parseInt(localStorage.getItem('habitharmony_streak') || '0', 10));
+    };
+    window.addEventListener('storage', syncStats);
+    syncStats();
+    return () => window.removeEventListener('storage', syncStats);
+  }, []);
 
   // Handle search input with debouncing
   useEffect(() => {

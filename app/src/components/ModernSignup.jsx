@@ -308,7 +308,7 @@ const ModernSignup = () => {
         
         // Set initial user data
         localStorage.setItem('habitharmony_user_name', formData.firstName);
-        localStorage.setItem('habitharmony_points', '0');
+        localStorage.setItem('habitharmony_points', response.data.user.points.toString());
         localStorage.setItem('habitharmony_streak', '0');
         localStorage.setItem('habitharmony_points_today', JSON.stringify({ date: '', points: 0 }));
         localStorage.setItem('habitharmony_last_streak_date', '');

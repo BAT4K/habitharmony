@@ -65,6 +65,9 @@ const Login = () => {
             if (userData) {
                 localStorage.setItem('habitharmony_user', JSON.stringify(userData));
                 localStorage.setItem('habitharmony_user_name', userData.name || userData.firstName);
+                if (userData.points !== undefined) {
+                    localStorage.setItem('habitharmony_points', userData.points.toString());
+                }
                 // Store habits if they exist in user data
                 if (userData.habits) {
                     // Map backend habits (strings) to full objects

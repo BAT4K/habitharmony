@@ -43,7 +43,8 @@ router.post('/register', async (req, res) => {
                 gender: user.gender,
                 birthdate: user.birthdate,
                 habits: user.habits,
-                premium: user.premium
+                premium: user.premium,
+                points: user.points
             }
         });
     } catch (error) {
@@ -85,7 +86,8 @@ router.post('/login', async (req, res) => {
                 gender: user.gender,
                 birthdate: user.birthdate,
                 habits: user.habits,
-                premium: user.premium
+                premium: user.premium,
+                points: user.points
             }
         });
     } catch (error) {
@@ -116,4 +118,16 @@ router.get('/user', async (req, res) => {
     res.status(401).json({ message: 'Invalid token' });
   }
 });
+
+// Update user stats (points, streak)
+router.post('/update-stats', async (req, res) => {
+    try {
+        const { userId, points, streak } = req.body;
+        const user = await User.findById(userId);
+        if (!user) return res.status(404).json({ message: 'User not found' });
+        if (points !== undefined) user.points = points;
+        if (streak !== undefined) user.streak = streak;
+        await user.save();
+        res.json({ success: true, user });
+    } catch (error) {
 module.exports = router;
