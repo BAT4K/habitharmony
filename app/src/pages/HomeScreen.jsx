@@ -378,7 +378,6 @@ const HomeScreen = () => {
 
     // Update points earned today (add or subtract)
     setPointsToday(prev => {
-      const today = getTodayStr();
       let newToday = prev + pointsDelta;
       if (newToday < 0) newToday = 0;
       localStorage.setItem(POINTS_TODAY_STORAGE_KEY, JSON.stringify({ date: today, points: newToday }));
@@ -386,7 +385,6 @@ const HomeScreen = () => {
     });
 
     // Handle streak logic
-    const today = getTodayStr();
     if (allHabitsCompleted(updatedHabits)) {
       if (lastStreakDate !== today) {
         willHitStreak = true;

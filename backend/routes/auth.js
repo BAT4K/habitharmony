@@ -130,4 +130,8 @@ router.post('/update-stats', async (req, res) => {
         await user.save();
         res.json({ success: true, user });
     } catch (error) {
+        res.status(500).json({ message: 'Server error', error: error.message });
+    }
+});
+
 module.exports = router;
