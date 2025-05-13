@@ -1,6 +1,10 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 @theme {
-  --font-display: "Inter", "sans-serif";}
+  --font-display: "Inter", "sans-serif";
+}
 
 body.celebration-blur .fixed.bottom-0.left-0.w-full {
   filter: blur(8px) brightness(0.7);
