@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { 
   ChevronLeft, ChevronRight, X, Calendar as CalendarIcon,
-  BarChart3, MessageSquareText, Edit, ArrowLeft, ArrowRight, Zap, Sun, Moon, LogOut, Award, Trophy, User
+  BarChart3, MessageSquare, Edit, ArrowLeft, ArrowRight, Zap, Sun, Moon, LogOut, Award, Trophy, User
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from 'react-router-dom';
@@ -621,7 +621,7 @@ const CalendarScreen = () => {
       <div className="px-4 mt-6">
         <div className="bg-white rounded-xl shadow p-4 flex flex-col gap-2">
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-blue-600"><MessageSquareText size={20} /></span>
+            <span className="text-blue-600"><MessageSquare size={20} /></span>
             <span className="font-bold text-gray-800">AI Coach Insight</span>
           </div>
           <div className="text-gray-700 text-base">

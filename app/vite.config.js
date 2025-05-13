@@ -12,7 +12,7 @@ export default defineConfig({
       output: {
         manualChunks: {
           'vendor': ['react', 'react-dom', 'react-router-dom'],
-          'ui': ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-toast'],
+          'ui': [],
           'utils': ['date-fns', 'framer-motion', 'lucide-react'],
         },
         chunkFileNames: 'assets/[name]-[hash].js',
