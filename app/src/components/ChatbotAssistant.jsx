@@ -95,13 +95,12 @@ const getSpecialOccasion = () => {
     "4-22": "Happy Earth Day",
     "5-1": "Happy Labor Day",
     "6-21": "Happy Summer Solstice",
-    "10-31": "Happy Halloween",
+    "10-31": "Happy Halloween and Diwali", // Combined Halloween and Diwali
     "11-23": "Happy Thanksgiving", // US Thanksgiving (4th Thursday of November, approx)
     "12-25": "Merry Christmas",
     "12-31": "Happy New Year's Eve",
     "2-10": "Happy Chinese New Year", // 2024 date, update as needed
     "4-10": "Happy Eid al-Fitr", // 2024 date, update as needed
-    "10-31": "Happy Diwali", // 2024 date, update as needed
     "12-7": "Happy Hanukkah", // 2024 date, update as needed
   };
   const occasionKey = `${month + 1}-${date}`;
