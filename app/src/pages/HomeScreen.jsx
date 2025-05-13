@@ -1,3 +1,4 @@
+   // Trigger Vercel fresh build - no code change
 import React, { useState, useEffect } from "react";
 import { 
   Sun, Plus, ChevronRight, Bell, Trophy, 
