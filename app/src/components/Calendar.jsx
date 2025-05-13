@@ -455,7 +455,7 @@ const Calendar = ({ onDateSelect, habitData }) => {
       </div>
       
       {/* Add a CSS style to hide scrollbar but keep functionality */}
-      <style jsx>{`
+      <style>{`
         .hide-scrollbar::-webkit-scrollbar {
           display: none;
         }

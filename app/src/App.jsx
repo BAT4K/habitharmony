@@ -42,12 +42,10 @@ const AppContent = () => {
   );
 };
 
-const App = () => {
-  return (
-    <BrowserRouter>
-      <AppContent />
-    </BrowserRouter>
-  );
-};
+const App = () => (
+  <BrowserRouter>
+    <AppContent />
+  </BrowserRouter>
+);
 
 export default App;

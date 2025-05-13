@@ -25,7 +25,7 @@ export default function ImageSlider() {
       const imagesToLoad = [Intro1, Intro4];
       const promises = imagesToLoad.map(src => {
         return new Promise((resolve, reject) => {
-          const img = new Image();
+          const img = new window.Image();
           img.src = src;
           img.onload = resolve;
           img.onerror = reject;
@@ -35,9 +35,8 @@ export default function ImageSlider() {
       try {
         await Promise.all(promises);
         setImagesLoaded(true);
-      } catch (error) {
-        console.error("Failed to load images:", error);
-        setImagesLoaded(true); 
+      } catch {
+        setImagesLoaded(true);
       }
     };
     
@@ -73,15 +72,7 @@ export default function ImageSlider() {
     slidesToShow: 1,
     slidesToScroll: 1,
     dotsClass: "slick-dots custom-dots",
-    lazyLoad: 'ondemand',
-    touchThreshold: 10,
-    useCSS: true,
-    useTransform: true,
-    cssEase: "ease-out",
-    swipeToSlide: true,
-    adaptiveHeight: false
-    // If you want the slide to be set on initial load when navigating directly with state:
-    // initialSlide: (location.state && typeof location.state.slide === 'number') ? location.state.slide : 0,
+    adaptiveHeight: false,
   };
 
   if (!imagesLoaded) {
@@ -93,99 +84,59 @@ export default function ImageSlider() {
   }
 
   return (
-    <div className="fixed inset-0 w-screen h-screen bg-white">
-      {/* styles */}
-      <style>
-        {`
-          .slick-slider, .slick-list, .slick-track {
-            height: 100vh;
-            touch-action: pan-y;
-            -webkit-overflow-scrolling: touch;
-          }
-          .slick-slide > div {
-            height: 100%;
-          }
-          .slick-slide {
-            will-change: transform;
-            transform: translate3d(0, 0, 0);
-            -webkit-transform: translate3d(0, 0, 0);
-            backface-visibility: hidden;
-            -webkit-backface-visibility: hidden;
-          }
-          .slick-dots {
-            bottom: 40px;
-            z-index: 10;
-          }
-          .slick-dots li button:before {
-            font-size: 12px;
-            color: #000;
-            opacity: 0.5;
-          }
-          .slick-dots li.slick-active button:before {
-            opacity: 1;
-          }
-          .slide-content {
-            height: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-          }
-          @media (max-width: 768px) {
-            .slick-dots {
-              bottom: 24px;
-            }
-            .slick-dots li {
-              margin: 0 6px;
-            }
-          }
-        `}
-      </style>
-      <Slider ref={sliderRef} {...settings}>
-        <div className="h-full">
-          <div className="slide-content">
-            <img
-              src={Intro1}
-              alt="Intro 1"
-              className="w-full h-full object-contain"
-              loading="eager"
-              width="100%"
-              height="100%"
-            />
-          </div>
+    <div style={{ width: '100vw', height: '100vh', background: '#eee', position: 'relative' }}>
+      <Slider {...settings}>
+        <div>
+          <img
+            src={Intro1}
+            alt="Intro 1"
+            style={{ width: '100vw', height: '100vh', objectFit: 'contain', background: 'white' }}
+          />
         </div>
-        <div className="h-full">
-          <div className="slide-content">
-            <img
-              src={Intro4}
-              alt="Intro 4"
-              className="w-full h-full object-contain"
-              loading="eager"
-              width="100%"
-              height="100%"
-            />
-          </div>
+        <div>
+          <img
+            src={Intro4}
+            alt="Intro 4"
+            style={{ width: '100vw', height: '100vh', objectFit: 'contain', background: 'white' }}
+          />
         </div>
-        <div className="h-full">
-          <div className="slide-content">
-            <Auth />
-          </div>
+        <div>
+          <Auth />
         </div>
       </Slider>
-      
-      <div className="fixed bottom-16 left-0 right-0 flex justify-between px-6 z-20">
-        <button 
-          onClick={() => sliderRef.current?.slickPrev()}
-          className="bg-white bg-opacity-50 rounded-full p-2 shadow-md focus:outline-none hidden"
-        >
-          ←
-        </button>
-        <button 
-          onClick={() => sliderRef.current?.slickNext()}
-          className="bg-white bg-opacity-50 rounded-full p-2 shadow-md focus:outline-none hidden"
-        >
-          →
-        </button>
-      </div>
+      <style>{`
+        .custom-dots {
+          position: absolute;
+          bottom: 24px;
+          left: 0;
+          width: 100vw;
+          display: flex !important;
+          justify-content: center;
+          z-index: 10;
+        }
+        .custom-dots li {
+          margin: 0 6px;
+        }
+        .custom-dots li button {
+          width: 12px;
+          height: 12px;
+          border-radius: 50%;
+          background: #bbb;
+          border: none;
+          padding: 0;
+          outline: none;
+          box-shadow: none;
+          position: relative;
+        }
+        .custom-dots li.slick-active button {
+          background: #914938;
+        }
+        /* Remove default slick pseudo-element for inner dot */
+        .custom-dots li button:before {
+          display: none !important;
+        }
+        /* Removed all hover, focus, and active styles for mobile. */
+      `}</style>
     </div>
   );
 }

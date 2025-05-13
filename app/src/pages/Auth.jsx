@@ -60,11 +60,9 @@ const Auth = () => {
         <div className="w-full max-w-xs flex flex-col gap-4 items-center">
           <button
             onClick={handleEmailLogin}
-            onMouseEnter={() => setLoginActive(true)}
-            onMouseLeave={() => setLoginActive(false)}
             onTouchStart={() => handleTouchStart('login')}
             onTouchEnd={() => handleTouchEnd('login')}
-            className="w-full py-4 px-6 bg-[#914938] text-white rounded-full font-bold text-lg flex items-center justify-center relative overflow-hidden active:bg-[#7e3f31] tap-highlight-transparent"
+            className="w-full py-4 px-6 bg-[#914938] text-white rounded-full font-bold text-lg flex items-center justify-center relative overflow-hidden tap-highlight-transparent"
             style={{
               transform: loginActive ? 'translateY(-2px) scale(0.98)' : 'translateY(0) scale(1)',
               transition: 'all 0.2s ease',
@@ -88,11 +86,9 @@ const Auth = () => {
           
           <button
             onClick={handleSignup}
-            onMouseEnter={() => setSignupActive(true)}
-            onMouseLeave={() => setSignupActive(false)}
             onTouchStart={() => handleTouchStart('signup')}
             onTouchEnd={() => handleTouchEnd('signup')}
-            className="w-full py-4 px-6 bg-white text-black border-0 rounded-full font-bold text-lg flex items-center justify-center relative overflow-hidden active:bg-gray-50 tap-highlight-transparent"
+            className="w-full py-4 px-6 bg-white text-black border-0 rounded-full font-bold text-lg flex items-center justify-center relative overflow-hidden tap-highlight-transparent"
             style={{
               transform: signupActive ? 'translateY(-2px) scale(0.98)' : 'translateY(0) scale(1)',
               transition: 'all 0.2s ease',
@@ -117,7 +113,7 @@ const Auth = () => {
       </div>
 
       {/* Add safe area padding for notched devices */}
-      <style jsx global>{`
+      <style>{`
         @supports (padding: env(safe-area-inset-bottom)) {
           .pb-16 {
             padding-bottom: calc(4rem + env(safe-area-inset-bottom));
@@ -127,13 +123,6 @@ const Auth = () => {
         /* Remove tap highlight on mobile */
         .tap-highlight-transparent {
           -webkit-tap-highlight-color: transparent;
-        }
-        
-        /* Improve button press effect */
-        @media (hover: none) {
-          button:active {
-            transform: scale(0.98);
-          }
         }
       `}</style>
     </div>

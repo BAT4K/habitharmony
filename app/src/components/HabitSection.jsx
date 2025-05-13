@@ -253,7 +253,7 @@ const HabitSection = () => {
       </AnimatePresence>
       
       {/* Style for hiding scrollbar */}
-      <style jsx>{`
+      <style>{`
         .no-scrollbar {
           -ms-overflow-style: none;
           scrollbar-width: none;
