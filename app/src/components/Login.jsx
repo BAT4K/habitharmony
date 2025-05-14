@@ -2,7 +2,6 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { ChevronLeft, Eye, EyeOff } from 'lucide-react';
 import api from '../services/api';
 import React, { useState, useEffect } from 'react';
-import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
 import { Capacitor } from '@capacitor/core';
 
 const Login = () => {
@@ -121,6 +120,7 @@ const Login = () => {
     const handleGoogleLogin = async () => {
         try {
             if (Capacitor.isNativePlatform()) {
+                const { GoogleAuth } = await import('@codetrix-studio/capacitor-google-auth');
                 // Initialize Google Auth
                 await GoogleAuth.initialize({
                     clientId: 'YOUR_WEB_CLIENT_ID', // Replace with your web client ID from Google Cloud Console
