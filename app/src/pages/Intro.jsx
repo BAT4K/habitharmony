@@ -1,15 +1,31 @@
 // Intro.jsx
 // Add useLocation to your imports
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, memo } from "react";
 import { useNavigate, useLocation } from "react-router-dom"; // Added useLocation
 import Slider from "react-slick";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
 import Auth from "./Auth";
+import { Capacitor } from '@capacitor/core';
 
 // Import images
-import Intro1 from "../assets/Intro1.svg";
-import Intro4 from "../assets/Intro4.svg";
+import Intro1 from "../assets/Intro1.webp";
+import Intro4 from "../assets/Intro4.webp";
+
+// Memoized slide component for performance
+const Slide = memo(({ src, alt, eager }) => (
+  <div className="w-screen h-screen">
+    <img
+      src={src}
+      alt={alt}
+      className="w-full h-full object-cover"
+      loading={eager ? "eager" : "lazy"}
+      draggable={false}
+      decoding="async"
+      style={{ willChange: 'transform' }}
+    />
+  </div>
+));
 
 export default function ImageSlider() {
   const navigate = useNavigate();
@@ -17,58 +33,32 @@ export default function ImageSlider() {
   const [imagesLoaded, setImagesLoaded] = useState(false);
   const sliderRef = useRef(null);
   
-  // Preload images before showing slider
+  // Preload only the first image eagerly
   useEffect(() => {
     document.body.classList.add("overflow-hidden");
-    
-    const preloadImages = async () => {
-      const imagesToLoad = [Intro1, Intro4];
-      const promises = imagesToLoad.map(src => {
-        return new Promise((resolve, reject) => {
-          const img = new window.Image();
-          img.src = src;
-          img.onload = resolve;
-          img.onerror = reject;
-        });
-      });
-      
-      try {
-        await Promise.all(promises);
-        setImagesLoaded(true);
-      } catch {
-        setImagesLoaded(true);
-      }
-    };
-    
-    preloadImages();
-    
+    const img = new window.Image();
+    img.src = Intro1;
+    img.onload = () => setImagesLoaded(true);
+    img.onerror = () => setImagesLoaded(true);
     return () => {
       document.body.classList.remove("overflow-hidden");
     };
   }, []);
 
-  // New useEffect to handle slide navigation based on location state
+  // Slide navigation based on location state
   useEffect(() => {
     if (imagesLoaded && sliderRef.current && location.state && typeof location.state.slide === 'number') {
-      // Ensure slickGoTo method exists on the slider instance
       if (typeof sliderRef.current.slickGoTo === 'function') {
         sliderRef.current.slickGoTo(location.state.slide);
-      } else {
-        // Fallback or warning if slickGoTo is not available immediately
-        // This might happen if the slider is not fully initialized.
-        // Consider a small delay or checking readiness if issues persist.
-        console.warn("slickGoTo method not available on sliderRef.current yet.");
-        // Optionally, clear the state to prevent repeated attempts if it's a one-time navigation
-        // navigate(location.pathname, { replace: true, state: {} }); 
       }
     }
-  }, [imagesLoaded, location.state, sliderRef, navigate]); // Added navigate to dependency array if using it inside
+  }, [imagesLoaded, location.state, sliderRef]);
 
   const settings = {
     dots: true,
     arrows: false,
     infinite: false,
-    speed: 300,
+    speed: 250,
     slidesToShow: 1,
     slidesToScroll: 1,
     dotsClass: "slick-dots custom-dots",
@@ -76,8 +66,20 @@ export default function ImageSlider() {
     swipeToSlide: true,
     touchThreshold: 10,
     cssEase: "linear",
-    lazyLoad: "progressive"
+    lazyLoad: "ondemand"
   };
+
+  useEffect(() => {
+    import('@capacitor/status-bar').then(({ StatusBar, Style }) => {
+      if (Capacitor.isNativePlatform && Capacitor.isNativePlatform()) {
+        StatusBar.setBackgroundColor({ color: '#FDEAC6' });
+        StatusBar.setStyle({ style: Style.Dark });
+        StatusBar.setOverlaysWebView({ overlay: false });
+        StatusBar.setNavigationBarColor({ color: '#F7B23D' });
+        document.querySelector('meta[name="theme-color"]')?.setAttribute('content', '#FDEAC6');
+      }
+    });
+  }, []);
 
   if (!imagesLoaded) {
     return (
@@ -90,22 +92,8 @@ export default function ImageSlider() {
   return (
     <div className="w-screen h-screen bg-white overflow-hidden">
       <Slider ref={sliderRef} {...settings}>
-        <div className="w-screen h-screen">
-          <img
-            src={Intro1}
-            alt="Intro 1"
-            className="w-full h-full object-cover"
-            loading="eager"
-          />
-        </div>
-        <div className="w-screen h-screen">
-          <img
-            src={Intro4}
-            alt="Intro 4"
-            className="w-full h-full object-cover"
-            loading="eager"
-          />
-        </div>
+        <Slide src={Intro1} alt="Intro 1" eager={true} />
+        <Slide src={Intro4} alt="Intro 4" eager={false} />
         <div className="w-screen h-screen">
           <Auth />
         </div>

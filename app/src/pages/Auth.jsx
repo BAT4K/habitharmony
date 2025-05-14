@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import Intro3 from "../assets/Intro3.svg"
+import Intro3 from "../assets/Intro3.webp"
 import { ArrowRight } from 'lucide-react'
 
 const Auth = () => {
@@ -52,7 +52,7 @@ const Auth = () => {
         src={Intro3} 
         alt="intro background" 
         className="w-full h-full object-cover block"
-        loading="eager"
+        loading="lazy"
       />
       
       <div className="absolute inset-0 flex flex-col justify-end items-center pb-16 md:pb-24 px-4 md:px-6">

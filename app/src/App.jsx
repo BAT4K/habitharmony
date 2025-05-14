@@ -1,17 +1,19 @@
-import React from "react";
+import React, { useEffect, Suspense, lazy } from "react";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
-import Login from './components/Login';  // Update this import path
-import ModernSignup from './components/ModernSignup';
-import HomeScreen from "./pages/HomeScreen";
-import Intro from "./pages/Intro";
-import Auth from "./pages/Auth";
-import CalendarPage from "./pages/CalendarPage";
-import BadgePage from "./pages/BadgePage";
-import ProfilePage from "./pages/ProfilePage";
-import SettingsPage from "./pages/SettingsPage";
-import AssistantPage from "./pages/AssistantPage"; // Add this import
 import Navbar from "./components/Navbar";
-import FriendsScreen from "./pages/FriendsScreen";
+
+// Lazy load route components
+const Login = lazy(() => import('./components/Login'));
+const ModernSignup = lazy(() => import('./components/ModernSignup'));
+const HomeScreen = lazy(() => import('./pages/HomeScreen'));
+const Intro = lazy(() => import('./pages/Intro'));
+const Auth = lazy(() => import('./pages/Auth'));
+const CalendarPage = lazy(() => import('./pages/CalendarPage'));
+const BadgePage = lazy(() => import('./pages/BadgePage'));
+const ProfilePage = lazy(() => import('./pages/ProfilePage'));
+const SettingsPage = lazy(() => import('./pages/SettingsPage'));
+const AssistantPage = lazy(() => import('./pages/AssistantPage'));
+const FriendsScreen = lazy(() => import('./pages/FriendsScreen'));
 
 const AppContent = () => {
   const location = useLocation();
@@ -21,24 +23,56 @@ const AppContent = () => {
     location.pathname
   );
 
-  return (
-    <div>
-      <Routes>
-        <Route path="/" element={<Intro />} />
-        <Route path="/auth" element={<Auth />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/signup" element={<ModernSignup />} />
-        <Route path="/homescreen" element={<HomeScreen />} />
-        <Route path="/calendar" element={<CalendarPage />} />
-        <Route path="/earning" element={<BadgePage />} />
-        <Route path="/profile" element={<ProfilePage />} />
-        <Route path="/settings" element={<SettingsPage />} />
-        <Route path="/assistant" element={<AssistantPage />} />
-        <Route path="/friends" element={<FriendsScreen />} />
-      </Routes>
+  // Global status bar and nav bar color effect
+  useEffect(() => {
+    // Only run on native
+    if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
+      import('@capacitor/status-bar').then(({ StatusBar, Style }) => {
+        // Default: white for all pages
+        let statusBarColor = '#FFFFFF';
+        let navBarColor = '#FFFFFF';
+        let themeColor = '#FFFFFF';
+        let style = Style.Dark;
+        // Intro page: special colors
+        if (location.pathname === '/' || location.pathname === '/auth') {
+          statusBarColor = '#FDEAC6';
+          navBarColor = '#F7B23D';
+          themeColor = '#FDEAC6';
+        } else if (location.pathname === '/homescreen') {
+          statusBarColor = '#F8F3F3';
+          navBarColor = '#FFFFFF';
+          themeColor = '#F8F3F3';
+        }
+        StatusBar.setBackgroundColor({ color: statusBarColor });
+        StatusBar.setStyle({ style });
+        StatusBar.setOverlaysWebView({ overlay: false });
+        StatusBar.setNavigationBarColor({ color: navBarColor });
+        document.querySelector('meta[name="theme-color"]')?.setAttribute('content', themeColor);
+      });
+    }
+  }, [location.pathname]);
 
-      {showNavbar && <Navbar />}
-    </div>
+  return (
+    <>
+      <div style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
+        <Suspense fallback={<div style={{height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>Loading...</div>}>
+          <Routes>
+            <Route path="/" element={<Intro />} />
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<ModernSignup />} />
+            <Route path="/homescreen" element={<HomeScreen />} />
+            <Route path="/calendar" element={<CalendarPage />} />
+            <Route path="/earning" element={<BadgePage />} />
+            <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/assistant" element={<AssistantPage />} />
+            <Route path="/friends" element={<FriendsScreen />} />
+          </Routes>
+        </Suspense>
+        {showNavbar && <Navbar />}
+      </div>
+    </>
   );
 };
 

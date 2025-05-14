@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import General from "../assets/General.webp";
 import Dark from "../assets/DarkMode.webp";
@@ -13,112 +13,26 @@ import Premium from "../assets/Premium.webp";
 import Info from "../assets/Info.webp";
 import Chat from "../assets/Chat.webp";
 import { useNavigate } from "react-router-dom";
+import { Capacitor } from '@capacitor/core';
+import GeneralSection from "../components/GeneralSection";
 
 const SettingsPage = () => {
   const navigate = useNavigate();
 
-  const GeneralSection = () => {
-    return (
-      <div className="bg-white pt-5 pb-1 px-4 rounded-2xl border border-[#CCCCCC]">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <img src={General} alt="General" />
-            <p className="text-[14px] font-semibold">General</p>
-          </div>
-          <ChevronRight />
-        </div>
-        <hr className="text-[#cccccc]" />
-        <div className="flex items-center justify-between mb-4 mt-4">
-          <div className="flex items-center gap-2">
-            <img src={Dark} alt="Dark Mode" />
-            <p className="text-[14px] font-semibold">Dark Mode</p>
-          </div>
-          <Toggle />
-        </div>
-        <hr className="text-[#cccccc]" />
-        <div className="flex items-center justify-between mb-4 mt-4">
-          <div className="flex items-center gap-2">
-            <img src={Security} alt="Security" />
-            <p className="text-[14px] font-semibold">Security</p>
-          </div>
-          <ChevronRight />
-        </div>
-        <hr className="text-[#cccccc]" />
-        <div className="flex items-center justify-between mb-4 mt-4">
-          <div className="flex items-center gap-2">
-            <img src={Notification} alt="Notification" />
-            <p className="text-[14px] font-semibold">Notifications</p>
-          </div>
-          <ChevronRight />
-        </div>
-        <hr className="text-[#cccccc]" />
-        <div className="flex items-center justify-between mb-4 mt-4">
-          <div className="flex items-center gap-2">
-            <img src={Sound} alt="Sounds" className="ml-1" />
-            <p className="text-[14px] font-semibold">Notifications</p>
-          </div>
-          <Toggle />
-        </div>
-        <hr className="text-[#cccccc]" />
-        <div className="flex items-center justify-between mb-4 mt-4">
-          <div className="flex items-center gap-2">
-            <img src={Play} alt="Play" />
-            <p className="text-[14px] font-semibold">Vacation Mode</p>
-          </div>
-          <Toggle />
-        </div>
-      </div>
-    );
-  };
-
-  const AboutSection = () => {
-    return (
-      <div className="bg-white pt-5 pb-1 px-4 rounded-2xl border border-[#CCCCCC]">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <img src={Star} alt="Star" />
-            <p className="text-[14px] font-semibold">Rate Routiner</p>
-          </div>
-          <ChevronRight />
-        </div>
-        <hr className="text-[#cccccc]" />
-        <div className="flex items-center justify-between mb-4 mt-4">
-          <div className="flex items-center gap-2">
-            <img src={Share} alt="Share" />
-            <p className="text-[14px] font-semibold">Share with Friends</p>
-          </div>
-          <ChevronRight />
-        </div>
-        <hr className="text-[#cccccc]" />
-        <div className="flex items-center justify-between mb-4 mt-4">
-          <div className="flex items-center gap-2">
-            <img src={Info} alt="Info" />
-            <p className="text-[14px] font-semibold">About Us</p>
-          </div>
-          <ChevronRight />
-        </div>
-        <hr className="text-[#cccccc]" />
-        <div className="flex items-center justify-between mb-4 mt-4">
-          <div className="flex items-center gap-2">
-            <img src={Chat} alt="Chat" />
-            <p className="text-[14px] font-semibold">Support</p>
-          </div>
-          <ChevronRight />
-        </div>
-        <hr className="text-[#cccccc]" />
-        <div className="flex items-center justify-between mb-4 mt-4">
-          <div className="flex items-center gap-2">
-            <img src={Premium} alt="Premium" />
-            <p className="text-[14px] font-semibold">Premium</p>
-          </div>
-          <ChevronRight />
-        </div>
-      </div>
-    );
-  };
+  useEffect(() => {
+    if (Capacitor.isNativePlatform && Capacitor.isNativePlatform()) {
+      import('@capacitor/status-bar').then(({ StatusBar, Style }) => {
+        StatusBar.setBackgroundColor({ color: '#F8F3F3' });
+        StatusBar.setStyle({ style: Style.Dark });
+        StatusBar.setOverlaysWebView({ overlay: false });
+        StatusBar.setNavigationBarColor({ color: '#FFFFFF' });
+        document.querySelector('meta[name="theme-color"]')?.setAttribute('content', '#F8F3F3');
+      });
+    }
+  }, []);
 
   return (
-    <div className="min-h-screen font-display bg-[#F8F3F3] pt-12 px-4">
+    <div className="min-h-screen font-display bg-[#F8F3F3] px-4">
       <div className="flex items-center gap-2">
         <ChevronLeft
           size={40}
@@ -134,10 +48,6 @@ const SettingsPage = () => {
         <GeneralSection />
       </div>
       <br />
-      <div className="px-3 space-y-2">
-        <p className="text-[#9B9BA1] font-medium text-[10px]">ABOUT US</p>
-        <AboutSection />
-      </div>
     </div>
   );
 };

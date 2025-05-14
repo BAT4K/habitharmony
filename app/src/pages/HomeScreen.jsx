@@ -7,7 +7,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import maradImg from '../assets/marad.webp';
 import auratImg from '../assets/aurat.webp';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { UPGRADE_FEATURES, UPGRADE_PRICES, getRemainingMessages, openRazorpay } from '../utils/upgradeInfo';
 
 // Mock data for the demo
@@ -162,6 +162,63 @@ const predefinedHabits = [
 
 const getTodayStr = () => new Date().toLocaleDateString('en-CA');
 
+const HabitSkeleton = React.memo(() => (
+  <div className="bg-white rounded-xl p-4 mb-3 border border-gray-100 flex items-center justify-between animate-pulse">
+    <div className="flex items-center gap-3">
+      <span className="bg-gray-200 rounded-full w-8 h-8 block" />
+      <div className="h-4 bg-gray-200 rounded w-24" />
+    </div>
+    <div className="flex items-center gap-2">
+      <span className="bg-orange-100 rounded w-10 h-4 block" />
+      <span className="bg-gray-200 rounded-full w-8 h-8 block" />
+    </div>
+  </div>
+));
+
+const MenuButton = React.memo(function MenuButton({ icon, label, onClick }) {
+  return (
+    <button
+      className="w-full flex items-center px-4 py-3 rounded-xl transition-all duration-150 active:bg-orange-100 focus:outline-none focus:ring-2 focus:ring-[#F75836] text-base font-medium group"
+      onClick={onClick}
+      tabIndex={0}
+      type="button"
+    >
+      {icon}
+      <span className="flex-1 text-left transition-colors">{label}</span>
+    </button>
+  );
+});
+
+const ProgressRing = React.memo(({ progress, size = 40, strokeWidth = 3, color = "#F75836" }) => {
+  const radius = (size - strokeWidth) / 2;
+  const circumference = radius * 2 * Math.PI;
+  const strokeDashoffset = circumference - (progress / 100) * circumference;
+  return (
+    <svg height={size} width={size} className="absolute top-0 left-0">
+      <circle
+        stroke="#E5E7EB"
+        fill="transparent"
+        strokeWidth={strokeWidth}
+        r={radius}
+        cx={size / 2}
+        cy={size / 2}
+      />
+      <circle
+        stroke={color}
+        fill="transparent"
+        strokeWidth={strokeWidth}
+        strokeDasharray={circumference}
+        strokeDashoffset={strokeDashoffset}
+        strokeLinecap="round"
+        r={radius}
+        cx={size / 2}
+        cy={size / 2}
+        style={{ transform: "rotate(-90deg)", transformOrigin: "center" }}
+      />
+    </svg>
+  );
+});
+
 const HomeScreen = () => {
   const [currentReminderIndex, setCurrentReminderIndex] = useState(0);
   const [showFABMenu, setShowFABMenu] = useState(false);
@@ -177,7 +234,7 @@ const HomeScreen = () => {
   const [selectedDay, setSelectedDay] = useState(null);
   const [habits, setHabits] = useState(() => {
     const stored = localStorage.getItem('habitharmony_user_habits');
-    let habitsArr = stored ? JSON.parse(stored).map(h => ({ ...h, completed: false, streak: 0 })) : habitsData.map(h => ({ ...h, completed: false }));
+    let habitsArr = stored ? JSON.parse(stored) : habitsData;
     // Load today's completed habits from calendar history
     const calendarHistory = JSON.parse(localStorage.getItem(CALENDAR_HISTORY_KEY) || '{}');
     const today = getTodayStr();
@@ -227,6 +284,7 @@ const HomeScreen = () => {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const isPremium = localStorage.getItem('habitharmony_premium') === 'true';
   const [currentTheme, setCurrentTheme] = useState(() => localStorage.getItem('habitharmony_theme') || 'light');
+  const location = useLocation();
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -324,12 +382,10 @@ const HomeScreen = () => {
         if (nowCompleted) {
           showCelebrate = true;
           newStreak = h.streak + 1;
-          // Award random points (5-10)
           pointsDelta = Math.floor(Math.random() * 6) + 5;
           setLastPointsEarned(pointsDelta);
         } else {
           newStreak = Math.max(0, h.streak - 1);
-          // Remove points if previously awarded
           pointsDelta = -(habitPoints[habitId] || 0);
           setLastPointsEarned(0);
         }
@@ -338,11 +394,13 @@ const HomeScreen = () => {
       return h;
     });
     setHabits(updatedHabits);
-    // Only update calendarHistory for completions
+    // Persist completed state for today in calendarHistory and habits
     const completedHabits = updatedHabits.filter(h => h.completed).map(h => h.id);
     setCalendarHistory(prev => {
       const updated = { ...prev, [today]: completedHabits };
       localStorage.setItem(CALENDAR_HISTORY_KEY, JSON.stringify(updated));
+      // Also update habits in localStorage to persist completed state
+      localStorage.setItem('habitharmony_user_habits', JSON.stringify(updatedHabits));
       return updated;
     });
 
@@ -504,38 +562,6 @@ const HomeScreen = () => {
     return () => clearInterval(interval);
   }, [currentReminderIndex, showReminder]);
 
-  // Progress ring component
-  const ProgressRing = ({ progress, size = 40, strokeWidth = 3, color = "#F75836" }) => {
-    const radius = (size - strokeWidth) / 2;
-    const circumference = radius * 2 * Math.PI;
-    const strokeDashoffset = circumference - (progress / 100) * circumference;
-    
-    return (
-      <svg height={size} width={size} className="absolute top-0 left-0">
-        <circle
-          stroke="#E5E7EB"
-          fill="transparent"
-          strokeWidth={strokeWidth}
-          r={radius}
-          cx={size / 2}
-          cy={size / 2}
-        />
-        <circle
-          stroke={color}
-          fill="transparent"
-          strokeWidth={strokeWidth}
-          strokeDasharray={circumference}
-          strokeDashoffset={strokeDashoffset}
-          strokeLinecap="round"
-          r={radius}
-          cx={size / 2}
-          cy={size / 2}
-          style={{ transform: "rotate(-90deg)", transformOrigin: "center" }}
-        />
-      </svg>
-    );
-  };
-
   // Helper to check if a date is today (local time)
   function isToday(dateStr) {
     return dateStr === new Date().toLocaleDateString('en-CA');
@@ -641,10 +667,36 @@ const HomeScreen = () => {
     return () => window.removeEventListener('storage', syncHabits);
   }, []);
 
+  useEffect(() => {
+    // Re-sync completed state for today from calendarHistory
+    const stored = localStorage.getItem('habitharmony_user_habits');
+    let habitsArr = stored ? JSON.parse(stored) : habitsData;
+    const calendarHistory = JSON.parse(localStorage.getItem(CALENDAR_HISTORY_KEY) || '{}');
+    const today = getTodayStr();
+    const completedIds = calendarHistory[today] || [];
+    habitsArr = habitsArr.map(h => ({
+      ...h,
+      completed: completedIds.includes(h.id)
+    }));
+    setHabits(habitsArr);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
+      import('@capacitor/status-bar').then(({ StatusBar, Style }) => {
+        StatusBar.setBackgroundColor({ color: '#F8F3F3' });
+        StatusBar.setStyle({ style: Style.Dark });
+        StatusBar.setOverlaysWebView({ overlay: false });
+        StatusBar.setNavigationBarColor({ color: '#FFFFFF' });
+        document.querySelector('meta[name="theme-color"]')?.setAttribute('content', '#F8F3F3');
+      });
+    }
+  }, []);
+
   return (
     <div className="min-h-screen font-display bg-[#F8F3F3] pb-24 relative overflow-y-auto">
       {/* Header - Sticky */}
-      <div className="sticky top-0 bg-[#F8F3F3] z-10 pt-6 pb-3 px-4 shadow-sm">
+      <div className="sticky top-0 bg-[#F8F3F3] z-10 pt-2 pb-3 px-4 shadow-sm">
         <div className="flex justify-between items-center">
           <div>
             <div className="flex items-center gap-2">
@@ -673,7 +725,7 @@ const HomeScreen = () => {
                 className="profile-menu-trigger size-10 rounded-full cursor-pointer border-2 border-[#F75836] overflow-hidden"
                 onClick={() => setShowProfileMenu(v => !v)}
               >
-                <img src={avatar} alt="Profile" className="w-full h-full object-cover" />
+                <img src={avatar} alt="Profile" className="w-full h-full object-cover" loading="lazy" />
                 {isPremium && (
                   <span className="absolute -top-1 -right-1 bg-green-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold shadow">Premium</span>
                 )}
@@ -720,35 +772,44 @@ const HomeScreen = () => {
             <Edit size={16} />
           </button>
         </div>
-        {habits.map(habit => (
-          <motion.div
-            key={habit.id}
-            whileHover={{ y: -1, boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}
-            whileTap={{ scale: 0.99 }}
-            className={`relative bg-white rounded-xl p-4 mb-3 border border-gray-100 flex items-center justify-between ${habit.completed ? 'opacity-60 line-through' : ''}`}
-          >
-            <div className="flex items-center gap-3">
-              <span className="text-2xl">{habit.icon}</span>
-              <h3 className="font-bold">{habit.name}</h3>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm flex items-center text-orange-500">
-                🔥 {habit.streak}d
-              </span>
-              <button
-                className={`ml-2 rounded-full border-2 ${habit.completed ? 'border-green-400 bg-green-100 text-green-600' : 'border-gray-300 bg-white text-gray-400'} size-8 flex items-center justify-center transition-all`}
-                onClick={() => toggleHabitCompleted(habit.id)}
-                aria-label="Toggle completed"
-              >
-                {habit.completed ? (
-                  <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg>
-                ) : (
-                  <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg>
-                )}
-              </button>
-            </div>
-          </motion.div>
-        ))}
+        {habits && habits.length > 0 ? (
+          habits.map(habit => (
+            <motion.div
+              key={habit.id}
+              whileHover={{ y: -1, boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}
+              whileTap={{ scale: 0.99 }}
+              className={`relative bg-white rounded-xl p-4 mb-3 border border-gray-100 flex items-center justify-between ${habit.completed ? 'opacity-60 line-through' : ''}`}
+            >
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">{habit.icon}</span>
+                <h3 className="font-bold">{habit.name}</h3>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm flex items-center text-orange-500">
+                  🔥 {habit.streak}d
+                </span>
+                <button
+                  className={`ml-2 rounded-full border-2 ${habit.completed ? 'border-green-400 bg-green-100 text-green-600' : 'border-gray-300 bg-white text-gray-400'} size-8 flex items-center justify-center transition-all`}
+                  onClick={() => toggleHabitCompleted(habit.id)}
+                  aria-label="Toggle completed"
+                >
+                  {habit.completed ? (
+                    <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg>
+                  ) : (
+                    <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg>
+                  )}
+                </button>
+              </div>
+            </motion.div>
+          ))
+        ) : (
+          // Show 3 skeletons if habits are not loaded
+          <>
+            <HabitSkeleton />
+            <HabitSkeleton />
+            <HabitSkeleton />
+          </>
+        )}
       </div>
       
       {/* Edit Habits Modal */}
@@ -1067,19 +1128,5 @@ const HomeScreen = () => {
     </div>
   );
 };
-
-function MenuButton({ icon, label, onClick }) {
-  return (
-    <button
-      className="w-full flex items-center px-4 py-3 rounded-xl transition-all duration-150 active:bg-orange-100 focus:outline-none focus:ring-2 focus:ring-[#F75836] text-base font-medium group"
-      onClick={onClick}
-      tabIndex={0}
-      type="button"
-    >
-      {icon}
-      <span className="flex-1 text-left transition-colors">{label}</span>
-    </button>
-  );
-}
 
 export default HomeScreen;

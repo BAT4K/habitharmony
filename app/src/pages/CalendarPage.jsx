@@ -6,6 +6,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from 'react-router-dom';
 import maradImg from '../assets/marad.webp';
+import { Capacitor } from '@capacitor/core';
 
 // Constants from HomeScreen
 const HABITS_STORAGE_KEY = 'habitharmony_user_habits';
@@ -426,6 +427,18 @@ const CalendarScreen = () => {
     return () => window.removeEventListener('storage', syncAvatar);
   }, []);
 
+  useEffect(() => {
+    if (Capacitor.isNativePlatform && Capacitor.isNativePlatform()) {
+      import('@capacitor/status-bar').then(({ StatusBar, Style }) => {
+        StatusBar.setBackgroundColor({ color: '#F8F3F3' });
+        StatusBar.setStyle({ style: Style.Dark });
+        StatusBar.setOverlaysWebView({ overlay: false });
+        StatusBar.setNavigationBarColor({ color: '#FFFFFF' });
+        document.querySelector('meta[name="theme-color"]')?.setAttribute('content', '#F8F3F3');
+      });
+    }
+  }, []);
+
   return (
     <div className="min-h-screen bg-[#F8F3F3] pb-24 relative overflow-y-auto">
       {/* Header - Sticky */}
@@ -450,7 +463,7 @@ const CalendarScreen = () => {
                 className="profile-menu-trigger size-10 rounded-full cursor-pointer border-2 border-[#F75836] overflow-hidden"
                 onClick={() => setShowProfileMenu(v => !v)}
               >
-                <img src={avatar} alt="Profile" className="w-full h-full object-cover" />
+                <img src={avatar} alt="Profile" className="w-full h-full object-cover" loading="lazy" />
                 {isPremium && (
                   <span className="absolute -top-1 -right-1 bg-green-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold shadow">Premium</span>
                 )}

@@ -9,6 +9,7 @@ import { useNavigate } from 'react-router-dom';
 import maradImg from '../assets/marad.webp';
 import auratImg from '../assets/aurat.webp';
 import { UPGRADE_FEATURES, UPGRADE_PRICES, UPGRADE_MESSAGE_LIMIT, getUserName, getRemainingMessages, openRazorpay } from '../utils/upgradeInfo';
+import { Capacitor } from '@capacitor/core';
 
 const ProfilePage = () => {
   const navigate = useNavigate();
@@ -299,10 +300,22 @@ const ProfilePage = () => {
     </motion.div>
   );
 
+  useEffect(() => {
+    if (Capacitor.isNativePlatform && Capacitor.isNativePlatform()) {
+      import('@capacitor/status-bar').then(({ StatusBar, Style }) => {
+        StatusBar.setBackgroundColor({ color: '#F8F3F3' });
+        StatusBar.setStyle({ style: Style.Dark });
+        StatusBar.setOverlaysWebView({ overlay: false });
+        StatusBar.setNavigationBarColor({ color: '#FFFFFF' });
+        document.querySelector('meta[name="theme-color"]')?.setAttribute('content', '#F8F3F3');
+      });
+    }
+  }, []);
+
   return (
     <div className="min-h-screen font-display bg-[#F8F3F3] pb-24 relative overflow-y-auto">
       {/* Header - Sticky */}
-      <div className="sticky top-0 bg-[#F8F3F3] z-10 pt-6 pb-3 px-4 shadow-sm">
+      <div className="sticky top-0 bg-[#F8F3F3] z-10 pb-3 px-4 shadow-sm">
         <div className="flex justify-between items-center">
           <h1 className="font-bold text-lg">Profile</h1>
           <div className="flex items-center gap-3">
@@ -332,7 +345,7 @@ const ProfilePage = () => {
               className="relative size-20 rounded-full border-2 border-[#F75836] overflow-hidden mr-4 cursor-pointer"
               onClick={handleAvatarClick}
             >
-              <img src={avatar} alt="Profile" className="w-full h-full object-cover" />
+              <img src={avatar} alt="Profile" className="w-full h-full object-cover" loading="lazy" />
               <div className="absolute bottom-0 right-0 bg-[#F75836] rounded-full p-1">
                 <Camera size={12} className="text-white" />
               </div>
@@ -738,7 +751,7 @@ const ProfilePage = () => {
                     className="relative size-20 rounded-full border-2 border-[#F75836] overflow-hidden cursor-pointer"
                     onClick={handleAvatarClick}
                   >
-                    <img src={avatar} alt="Profile" className="w-full h-full object-cover" />
+                    <img src={avatar} alt="Profile" className="w-full h-full object-cover" loading="lazy" />
                     <div className="absolute bottom-0 right-0 bg-[#F75836] rounded-full p-1">
                       <Camera size={12} className="text-white" />
                     </div>

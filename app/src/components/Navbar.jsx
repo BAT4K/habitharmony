@@ -177,9 +177,6 @@ const Navbar = () => {
           </motion.button>
         </div>
       </div>
-      
-      {/* Bottom Safe Area for iPhone */}
-      <div className="h-6 bg-white w-full" />
     </div>
   );
 };

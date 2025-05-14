@@ -4,7 +4,7 @@ const ProgressCard = ({ icon, title, goal, progress }) => {
   return (
     <div className="bg-pink-100 rounded-lg p-4 w-64 shadow-md">
       <div className="flex items-center mb-4">
-        <img src={icon} alt={`${title} Icon`} className="w-10 h-10 rounded-full" />
+        <img src={icon} alt={`${title} Icon`} className="w-10 h-10 rounded-full" loading="lazy" />
       </div>
       <div>
         <h2 className="text-lg font-bold">{title}</h2>

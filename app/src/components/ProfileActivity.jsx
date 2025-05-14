@@ -13,6 +13,7 @@ const ProfileActivity = ({ act }) => {
       <img
         src={act === "positive" ? Pos : act === "negative" ? Neg : AwardAct}
         alt=""
+        loading="lazy"
       />
     </div>
   );

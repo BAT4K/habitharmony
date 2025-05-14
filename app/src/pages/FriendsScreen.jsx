@@ -16,6 +16,7 @@ import { ProgressRing } from '../components/ProgressRing';
 import { formatDistanceToNow } from 'date-fns';
 import maradImg from '../assets/marad.webp';
 import { useNavigate } from 'react-router-dom';
+import { Capacitor } from '@capacitor/core';
 
 const tabClasses = (active) =>
   `px-4 py-2 rounded-xl font-semibold transition-colors duration-150 text-base focus:outline-none min-w-[110px] whitespace-nowrap ${
@@ -147,6 +148,18 @@ const FriendsScreen = () => {
 
     return () => cleanup();
   }, [user?.id, socket, fetchActivityFeed]);
+
+  useEffect(() => {
+    if (Capacitor.isNativePlatform && Capacitor.isNativePlatform()) {
+      import('@capacitor/status-bar').then(({ StatusBar, Style }) => {
+        StatusBar.setBackgroundColor({ color: '#F8F3F3' });
+        StatusBar.setStyle({ style: Style.Dark });
+        StatusBar.setOverlaysWebView({ overlay: false });
+        StatusBar.setNavigationBarColor({ color: '#FFFFFF' });
+        document.querySelector('meta[name="theme-color"]')?.setAttribute('content', '#F8F3F3');
+      });
+    }
+  }, []);
 
   const handleFriendClick = async (friend) => {
     setSelectedFriend(friend);
@@ -673,7 +686,7 @@ const FriendsScreen = () => {
                 className="profile-menu-trigger w-8 h-8 md:w-10 md:h-10 rounded-full border-2 border-[#F75836] cursor-pointer overflow-hidden"
                 onClick={() => setShowProfileMenu(v => !v)}
               >
-                <img src={avatar} alt="Profile" className="w-full h-full object-cover" />
+                <img src={avatar} alt="Profile" className="w-full h-full object-cover" loading="lazy" />
                 {isPremium && (
                   <span className="absolute -top-1 -right-1 bg-green-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold shadow">Premium</span>
                 )}

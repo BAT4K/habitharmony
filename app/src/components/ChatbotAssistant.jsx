@@ -9,6 +9,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import maradImg from '../assets/marad.webp';
 import ReactMarkdown from 'react-markdown';
+import { getRemainingMessages } from '../utils/upgradeInfo';
 
 // Robust helper to normalize API base URL (removes trailing /api or /)
 function getApiBaseUrl() {
@@ -510,6 +511,7 @@ export default function AICoach({ onBack }) {
   // Function to get AI response from Gemini
   const getAIResponse = async (text) => {
     try {
+      setIsTyping(true); // Start typing animation
       const habitData = getUserHabitData();
       const systemPrompt = `
 You are Coach Nova, the AI coach for Habit Harmony, a habit tracking and wellness app.
@@ -552,13 +554,21 @@ Here is the user's habit data:
         { id: prev.length + 1, text: 'Sorry, I encountered an error. Please try again later.', sender: 'ai', time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }
       ]);
     } finally {
+      setIsTyping(false); // Stop typing animation
       setIsLoading(false);
     }
   };
 
   // Function to send a message
   const handleSendMessage = async (input) => {
-    if (!input.trim() || isLoading || remainingMessages <= 0) return;
+    if (!input.trim() || isLoading) return;
+    
+    // Check if user has remaining messages
+    const remaining = getRemainingMessages();
+    if (remaining <= 0 && !premium) {
+      setShowLimitReachedModal(true);
+      return;
+    }
 
     setInput('');
     setIsLoading(true);
@@ -568,6 +578,13 @@ Here is the user's habit data:
       ...prev,
       { id: prev.length + 1, text: input, sender: 'user', time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }
     ]);
+
+    // Decrement remaining messages if not premium
+    if (!premium) {
+      const newRemaining = remaining - 1;
+      localStorage.setItem('habitharmony_remaining_messages', newRemaining.toString());
+      setRemainingMessages(newRemaining);
+    }
 
     // Get AI response
     await getAIResponse(input);
@@ -961,7 +978,7 @@ Here is the user's habit data:
               whileTap={{ scale: 0.95 }}
               className="relative size-10 rounded-full cursor-pointer border-2 border-[#F75836] overflow-hidden"
             >
-              <img src={maradImg} alt="Profile" className="w-full h-full object-cover" />
+              <img src={maradImg} alt="Profile" className="w-full h-full object-cover" loading="lazy" />
             </motion.div>
           </div>
         </div>

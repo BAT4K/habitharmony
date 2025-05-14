@@ -55,6 +55,7 @@ const ProfileHeader = () => {
                     src={Profile}
                     alt="Profile Picture"
                     className="border-2 border-black rounded-full h-[76px] w-[76px]"
+                    loading="lazy"
                 />
                 <div className="flex justify-center flex-col w-full">
                     <div className="flex justify-between items-center">

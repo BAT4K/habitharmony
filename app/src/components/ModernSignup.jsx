@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, Eye, EyeOff } from 'lucide-react';
 import maradImg from '../assets/marad.webp';
@@ -632,7 +632,7 @@ const ModernSignup = () => {
           onClick={() => handleGenderSelect('male')}
         >
           <div className='w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center mb-4 overflow-hidden'>
-            <img src={maradImg} alt="Male avatar" className="w-full h-full object-cover" />
+            <img src={maradImg} alt="Male avatar" className="w-full h-full object-cover" loading="lazy" />
           </div>
           <span className='font-medium'>Male</span>
         </div>
@@ -645,7 +645,7 @@ const ModernSignup = () => {
           onClick={() => handleGenderSelect('female')}
         >
           <div className='w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center mb-4 overflow-hidden'>
-            <img src={auratImg} alt="Female avatar" className="w-full h-full object-cover" />
+            <img src={auratImg} alt="Female avatar" className="w-full h-full object-cover" loading="lazy" />
           </div>
           <span className='font-medium'>Female</span>
         </div>
@@ -767,8 +767,20 @@ const ModernSignup = () => {
     );
   };
   
+  useEffect(() => {
+    import('@capacitor/status-bar').then(({ StatusBar, Style }) => {
+      if (Capacitor.isNativePlatform && Capacitor.isNativePlatform()) {
+        StatusBar.setBackgroundColor({ color: '#FFFFFF' });
+        StatusBar.setStyle({ style: Style.Dark });
+        StatusBar.setOverlaysWebView({ overlay: false });
+        StatusBar.setNavigationBarColor({ color: '#FFFFFF' });
+        document.querySelector('meta[name="theme-color"]')?.setAttribute('content', '#FFFFFF');
+      }
+    });
+  }, []);
+  
   return (
-    <div className='flex flex-col min-h-screen bg-white'>
+    <div className="flex flex-col min-h-screen bg-white">
       {/* Header with back button and progress */}
       <div className='flex flex-col'>
         <div className='flex items-center px-4 py-4'>
