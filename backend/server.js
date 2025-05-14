@@ -58,7 +58,8 @@ app.use(cors({
         'http://localhost:5173',
         'http://localhost:3000',
         'https://habitharmony.onrender.com',
-        'https://habitharmony.vercel.app'
+        'https://habitharmony.vercel.app',
+        'https://localhost' // Added for Capacitor Android app
     ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],

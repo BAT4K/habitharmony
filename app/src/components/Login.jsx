@@ -2,6 +2,8 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { ChevronLeft, Eye, EyeOff } from 'lucide-react';
 import api from '../services/api';
 import React, { useState, useEffect } from 'react';
+import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
+import { Capacitor } from '@capacitor/core';
 
 const Login = () => {
     const navigate = useNavigate();
@@ -116,10 +118,40 @@ const Login = () => {
         setFieldFocus({ ...fieldFocus, [field]: false });
     };
 
-    const handleGoogleLogin = () => {
-        // This would typically call your Google OAuth implementation
-        console.log("Google login clicked - implementation needed");
-        // Example: window.location.href = '/api/auth/google';
+    const handleGoogleLogin = async () => {
+        try {
+            if (Capacitor.isNativePlatform()) {
+                // Initialize Google Auth
+                await GoogleAuth.initialize({
+                    clientId: 'YOUR_WEB_CLIENT_ID', // Replace with your web client ID from Google Cloud Console
+                    scopes: ['profile', 'email'],
+                    serverClientId: 'YOUR_SERVER_CLIENT_ID', // Replace with your server client ID if you have one
+                });
+
+                // Sign in with Google
+                const user = await GoogleAuth.signIn();
+                console.log('Google Sign-In successful:', user);
+
+                // Call your backend API for Google login
+                const response = await api.googleLogin({
+                    email: user.email,
+                    googleId: user.id
+                });
+
+                // Store the token and user data
+                localStorage.setItem('token', response.token);
+                localStorage.setItem('habitharmony_user', JSON.stringify(response.user));
+                
+                // Navigate to homescreen
+                navigate('/homescreen');
+            } else {
+                // Handle web platform differently if needed
+                console.log('Google Sign-In not available on web platform');
+            }
+        } catch (error) {
+            console.error('Google Sign-In error:', error);
+            setError('Failed to sign in with Google. Please try again.');
+        }
     };
 
     return (

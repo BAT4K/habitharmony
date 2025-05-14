@@ -6,6 +6,8 @@ import auratImg from '../assets/aurat.webp';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import axios from 'axios';
+import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
+import { Capacitor } from '@capacitor/core';
 
 // Add this after the imports and before the habits array:
 const customDatePickerStyles = {
@@ -350,9 +352,48 @@ const ModernSignup = () => {
   };
   
   // Google sign up handler
-  const handleGoogleSignup = () => {
-    console.log("Google signup clicked - implementation needed");
-    // Implement Google OAuth flow
+  const handleGoogleSignup = async () => {
+    try {
+      if (Capacitor.isNativePlatform()) {
+        // Initialize Google Auth
+        await GoogleAuth.initialize({
+          clientId: 'YOUR_WEB_CLIENT_ID', // Replace with your web client ID from Google Cloud Console
+          scopes: ['profile', 'email'],
+          serverClientId: 'YOUR_SERVER_CLIENT_ID', // Replace with your server client ID if you have one
+        });
+
+        // Sign in with Google
+        const user = await GoogleAuth.signIn();
+        console.log('Google Sign-In successful:', user);
+
+        // Format the data for your backend
+        const signupData = {
+          name: user.givenName,
+          surname: user.familyName,
+          email: user.email,
+          password: '', // You might want to generate a random password or handle this differently
+          gender: '', // You'll need to get this from the user later
+          birthdate: '', // You'll need to get this from the user later
+          habits: [] // You'll need to get this from the user later
+        };
+
+        // Call your backend API
+        const response = await axios.post('https://habitharmony.onrender.com/api/auth/google', signupData);
+
+        // Store the token and user data
+        localStorage.setItem('token', response.data.token);
+        localStorage.setItem('habitharmony_user', JSON.stringify(response.data.user));
+        
+        // Navigate to homescreen
+        navigate('/homescreen');
+      } else {
+        // Handle web platform differently if needed
+        console.log('Google Sign-In not available on web platform');
+      }
+    } catch (error) {
+      console.error('Google Sign-In error:', error);
+      alert('Failed to sign in with Google. Please try again.');
+    }
   };
   
   // Render step 1: Personal Info

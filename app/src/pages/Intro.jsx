@@ -73,6 +73,10 @@ export default function ImageSlider() {
     slidesToScroll: 1,
     dotsClass: "slick-dots custom-dots",
     adaptiveHeight: false,
+    swipeToSlide: true,
+    touchThreshold: 10,
+    cssEase: "linear",
+    lazyLoad: "progressive"
   };
 
   if (!imagesLoaded) {
@@ -84,23 +88,25 @@ export default function ImageSlider() {
   }
 
   return (
-    <div style={{ width: '100vw', height: '100vh', background: '#eee', position: 'relative' }}>
-      <Slider {...settings}>
-        <div>
+    <div className="w-screen h-screen bg-white overflow-hidden">
+      <Slider ref={sliderRef} {...settings}>
+        <div className="w-screen h-screen">
           <img
             src={Intro1}
             alt="Intro 1"
-            style={{ width: '100vw', height: '100vh', objectFit: 'contain', background: 'white' }}
+            className="w-full h-full object-cover"
+            loading="eager"
           />
         </div>
-        <div>
+        <div className="w-screen h-screen">
           <img
             src={Intro4}
             alt="Intro 4"
-            style={{ width: '100vw', height: '100vh', objectFit: 'contain', background: 'white' }}
+            className="w-full h-full object-cover"
+            loading="eager"
           />
         </div>
-        <div>
+        <div className="w-screen h-screen">
           <Auth />
         </div>
       </Slider>
@@ -109,13 +115,16 @@ export default function ImageSlider() {
           position: absolute;
           bottom: 24px;
           left: 0;
-          width: 100vw;
+          width: 100%;
           display: flex !important;
           justify-content: center;
           z-index: 10;
+          padding: 0;
+          margin: 0;
         }
         .custom-dots li {
           margin: 0 6px;
+          padding: 0;
         }
         .custom-dots li button {
           width: 12px;
@@ -127,15 +136,23 @@ export default function ImageSlider() {
           outline: none;
           box-shadow: none;
           position: relative;
+          transition: background-color 0.3s ease;
         }
         .custom-dots li.slick-active button {
           background: #914938;
         }
-        /* Remove default slick pseudo-element for inner dot */
         .custom-dots li button:before {
           display: none !important;
         }
-        /* Removed all hover, focus, and active styles for mobile. */
+        .slick-slide {
+          height: 100vh !important;
+        }
+        .slick-list, .slick-track {
+          height: 100% !important;
+        }
+        .slick-slide > div {
+          height: 100% !important;
+        }
       `}</style>
     </div>
   );

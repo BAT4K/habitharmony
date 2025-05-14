@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Define the API base URL, attempting to read from Vite environment variables first,
 // then falling back to a default URL.
-const API_URL = import.meta.env.VITE_API_URL || "https://habitharmony.onrender.com/api";
+const API_URL = 'https://habitharmony.onrender.com/api';
 
 // Create an Axios instance for API calls that require authentication
 // or benefit from a base URL.
@@ -69,37 +69,33 @@ const api = {
      */
     login: async (credentials) => {
         try {
-            console.log("[API Login] Attempting login with credentials:", credentials); // Log what's being sent
+            console.log("[API Login] Attempting login with credentials:", credentials);
+            console.log("[API Login] Using API URL:", API_URL);
             const response = await axios.post(`${API_URL}/auth/login`, credentials);
-            console.log("[API Login] Response:", response); // Log the full response
+            console.log("[API Login] Response:", response);
 
             if (response.data && response.data.token) {
                 localStorage.setItem('token', response.data.token);
                 console.log("[API Login] Token stored successfully.");
             } else {
-                console.warn("[API Login] Login response received, but no token found in response.data:", response.data);
+                console.warn("[API Login] Login response received, but no token found:", response.data);
             }
             return response.data;
         } catch (error) {
-            console.error("[API Login] Error:", error.response || error.message || error);
+            console.error("[API Login] Error:", error);
             if (error.response) {
-                // The request was made and the server responded with a status code
-                // that falls out of the range of 2xx
-                console.error("[API Login] Error data:", error.response.data);
-                console.error("[API Login] Error status:", error.response.status);
-                // Re-throw a more specific error or return a structured error object
-                throw { // Important: ensure your component catches this structured error
-                    message: error.response.data?.message || error.response.data?.error || "Invalid credentials or server error",
+                console.error("[API Login] Error response data:", error.response.data);
+                console.error("[API Login] Error response status:", error.response.status);
+                throw {
+                    message: error.response.data?.message || "Login failed",
                     status: error.response.status,
                     data: error.response.data
                 };
             } else if (error.request) {
-                // The request was made but no response was received
-                console.error("[API Login] No response received:", error.request);
+                console.error("[API Login] No response received. Request details:", error.request);
                 throw new Error("No response from server. Check network or server status.");
             } else {
-                // Something happened in setting up the request that triggered an Error
-                console.error("[API Login] Request setup error message:", error.message);
+                console.error("[API Login] Error setting up request:", error.message);
                 throw new Error(error.message || "An unexpected error occurred during login.");
             }
         }
