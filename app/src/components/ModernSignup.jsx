@@ -354,7 +354,8 @@ const ModernSignup = () => {
   const handleGoogleSignup = async () => {
     try {
         if (Capacitor.isNativePlatform()) {
-            const { GoogleAuth } = await import('@codetrix-studio/capacitor-google-auth');
+            const moduleName = '@codetrix-studio/capacitor-google-auth';
+            const { GoogleAuth } = await import(moduleName);
             // Initialize Google Auth
             await GoogleAuth.initialize({
                 clientId: 'YOUR_WEB_CLIENT_ID', // Replace with your web client ID from Google Cloud Console
