@@ -1,5 +1,6 @@
 {
-  "appId": "com.arjunhh.habitharmony",
+  "appId": "com.habitharmony.app",
   "appName": "Habit Harmony",
-  "webDir": "dist"
+  "webDir": "dist",
+  "bundledWebRuntime": false
 }

@@ -1,8 +1,6 @@
 {
   "appId": "com.habitharmony.app",
-  "appName": "Habit Harmony",
+  "appName": "HabitHarmony",
   "webDir": "dist",
-  "server": {
-    "androidScheme": "https"
-  }
+  "bundledWebRuntime": false
 } 

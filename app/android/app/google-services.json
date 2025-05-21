@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "939583883917",
+    "project_id": "habit-harmony-e8e94",
+    "storage_bucket": "habit-harmony-e8e94.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:939583883917:android:71816e06269d71c3a930c4",
+        "android_client_info": {
+          "package_name": "com.habitharmony.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "939583883917-emkkjlmbiu2e6bdii7tt24av0pn8t1ri.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.habitharmony.app",
+            "certificate_hash": "b2d066cbe27107670a4e50f6543f3505181903fa"
+          }
+        },
+        {
+          "client_id": "939583883917-ptb0pqultsvt15r5080iseg2jjnqunp3.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA8RGP6K0XjqF0hX1lF4vth4X0H0yptjKU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "939583883917-ptb0pqultsvt15r5080iseg2jjnqunp3.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -3,6 +3,8 @@ import { ChevronLeft, Eye, EyeOff } from 'lucide-react';
 import api from '../services/api';
 import React, { useState, useEffect } from 'react';
 import { Capacitor } from '@capacitor/core';
+import { auth } from '../firebase'; // Assuming firebase.js is in src/
+import { GoogleAuthProvider, signInWithPopup, signInWithCredential } from 'firebase/auth';
 
 const Login = () => {
     const navigate = useNavigate();
@@ -119,35 +121,28 @@ const Login = () => {
 
     const handleGoogleLogin = async () => {
         try {
-            if (Capacitor.isNativePlatform()) {
-                const moduleName = '@codetrix-studio/capacitor-google-auth';
-                const { GoogleAuth } = await import(moduleName);
+            if (Capacitor.isNativePlatform && Capacitor.isNativePlatform()) {
+                // Native: Use Capacitor plugin, then sign in to Firebase
+                const { GoogleAuth } = await import('@codetrix-studio/capacitor-google-auth');
                 // Initialize Google Auth
                 await GoogleAuth.initialize({
-                    clientId: '102154370507-bjjv00hslnde0nh5bo4hu7lk536pjsev.apps.googleusercontent.com',
+                    clientId: '939583883917-emkkjlmbiu2e6bdii7tt24av0pn8t1ri.apps.googleusercontent.com', // This is your Android client ID
                     scopes: ['profile', 'email'],
-                    serverClientId: '102154370507-bjjv00hslnde0nh5bo4hu7lk536pjsev.apps.googleusercontent.com'
+                    serverClientId: '939583883917-ptb0pqultsvt15r5080iseg2jjnqunp3.apps.googleusercontent.com', // This is your Web client ID
+                    forceCodeForRefreshToken: true
                 });
-
-                // Sign in with Google
-                const user = await GoogleAuth.signIn();
-                console.log('Google Sign-In successful:', user);
-
-                // Call your backend API for Google login
-                const response = await api.googleLogin({
-                    email: user.email,
-                    googleId: user.id
-                });
-
-                // Store the token and user data
-                localStorage.setItem('token', response.token);
-                localStorage.setItem('habitharmony_user', JSON.stringify(response.user));
-                
-                // Navigate to homescreen
+                const result = await GoogleAuth.signIn();
+                const idToken = result.authentication.idToken;
+                const credential = GoogleAuthProvider.credential(idToken);
+                await signInWithCredential(auth, credential);
+                // User is now signed in to Firebase, you can redirect or store user info
                 navigate('/homescreen');
             } else {
-                // Handle web platform differently if needed
-                console.log('Google Sign-In not available on web platform');
+                // Web: Use Firebase popup
+                const provider = new GoogleAuthProvider();
+                await signInWithPopup(auth, provider);
+                // User is now signed in to Firebase, you can redirect or store user info
+                navigate('/homescreen');
             }
         } catch (error) {
             console.error('Google Sign-In error:', error);

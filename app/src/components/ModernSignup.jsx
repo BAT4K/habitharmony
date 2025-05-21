@@ -7,8 +7,9 @@ import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import axios from 'axios';
 import { Capacitor } from '@capacitor/core';
+import { auth } from '../firebase'; // Assuming firebase.js is in src/
+import { GoogleAuthProvider, signInWithPopup, signInWithCredential } from 'firebase/auth';
 
-// Add this after the imports and before the habits array:
 const customDatePickerStyles = {
   '.react-datepicker': {
     fontFamily: 'inherit',
@@ -65,6 +66,7 @@ const ModernSignup = () => {
   const [step, setStep] = useState(1);
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
   
   // Form data state
   const [formData, setFormData] = useState({
@@ -353,39 +355,32 @@ const ModernSignup = () => {
   // Google sign up handler
   const handleGoogleSignup = async () => {
     try {
-        if (Capacitor.isNativePlatform()) {
-            const moduleName = '@codetrix-studio/capacitor-google-auth';
-            const { GoogleAuth } = await import(moduleName);
-            // Initialize Google Auth
-            await GoogleAuth.initialize({
-                clientId: '102154370507-bjjv00hslnde0nh5bo4hu7lk536pjsev.apps.googleusercontent.com',
-                scopes: ['profile', 'email'],
-                serverClientId: '102154370507-bjjv00hslnde0nh5bo4hu7lk536pjsev.apps.googleusercontent.com'
-            });
-
-            // Sign in with Google
-            const user = await GoogleAuth.signIn();
-            console.log('Google Sign-In successful:', user);
-
-            // Call your backend API for Google signup
-            const response = await axios.post('https://habitharmony.onrender.com/api/auth/google', {
-                email: user.email,
-                googleId: user.id
-            });
-
-            // Store the token and user data
-            localStorage.setItem('token', response.data.token);
-            localStorage.setItem('habitharmony_user', JSON.stringify(response.data.user));
-            
-            // Navigate to homescreen
-            navigate('/homescreen');
-        } else {
-            // Handle web platform differently if needed
-            console.log('Google Sign-Up not available on web platform');
-        }
+      if (Capacitor.isNativePlatform && Capacitor.isNativePlatform()) {
+        // Native: Use Capacitor plugin, then sign in to Firebase
+        const { GoogleAuth } = await import('@codetrix-studio/capacitor-google-auth');
+        // Initialize Google Auth
+        await GoogleAuth.initialize({
+          clientId: '939583883917-emkkjlmbiu2e6bdii7tt24av0pn8t1ri.apps.googleusercontent.com', // This is your Android client ID
+          scopes: ['profile', 'email'],
+          serverClientId: '939583883917-ptb0pqultsvt15r5080iseg2jjnqunp3.apps.googleusercontent.com', // This is your Web client ID
+          forceCodeForRefreshToken: true
+        });
+        const result = await GoogleAuth.signIn();
+        const idToken = result.authentication.idToken;
+        const credential = GoogleAuthProvider.credential(idToken);
+        await signInWithCredential(auth, credential);
+        // User is now signed in to Firebase, you can redirect or store user info
+        navigate('/homescreen');
+      } else {
+        // Web: Use Firebase popup
+        const provider = new GoogleAuthProvider();
+        await signInWithPopup(auth, provider);
+        // User is now signed in to Firebase, you can redirect or store user info
+        navigate('/homescreen');
+      }
     } catch (error) {
-        console.error('Google Sign-Up error:', error);
-        setError('Failed to sign up with Google. Please try again.');
+      console.error('Google Sign-Up error:', error);
+      setError('Failed to sign up with Google. Please try again.');
     }
   };
   

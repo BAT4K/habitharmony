@@ -1,7 +1,0 @@
-<?xml version='1.0' encoding='utf-8'?>
-<resources>
-    <string name="app_name">Habit Harmony</string>
-    <string name="title_activity_main">Habit Harmony</string>
-    <string name="package_name">com.arjunhh.habitharmony</string>
-    <string name="custom_url_scheme">com.arjunhh.habitharmony</string>
-</resources>
