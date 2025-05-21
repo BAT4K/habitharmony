@@ -358,9 +358,9 @@ const ModernSignup = () => {
             const { GoogleAuth } = await import(moduleName);
             // Initialize Google Auth
             await GoogleAuth.initialize({
-                clientId: 'YOUR_WEB_CLIENT_ID', // Replace with your web client ID from Google Cloud Console
+                clientId: '102154370507-bjjv00hslnde0nh5bo4hu7lk536pjsev.apps.googleusercontent.com',
                 scopes: ['profile', 'email'],
-                serverClientId: 'YOUR_SERVER_CLIENT_ID', // Replace with your server client ID if you have one
+                serverClientId: '102154370507-bjjv00hslnde0nh5bo4hu7lk536pjsev.apps.googleusercontent.com'
             });
 
             // Sign in with Google

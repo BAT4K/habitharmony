@@ -117,7 +117,7 @@ const api = {
     getProfile: async () => {
         try {
             console.log("[API GetProfile] Attempting to fetch profile.");
-            const response = await instance.get('/profile'); // Assuming '/profile' is relative
+            const response = await instance.get('/profile');
             console.log("[API GetProfile] Response:", response);
             return response.data;
         } catch (error) {
@@ -135,6 +135,43 @@ const api = {
                 throw new Error("No response from server for getProfile.");
             } else {
                 throw new Error(error.message || "An unexpected error occurred while fetching profile.");
+            }
+        }
+    },
+
+    /**
+     * Authenticates a user with Google.
+     * @param {object} googleData - Google authentication data (email and googleId).
+     * @returns {Promise<object>} The response data from the API.
+     */
+    googleLogin: async (googleData) => {
+        try {
+            console.log("[API GoogleLogin] Attempting Google login with data:", googleData);
+            const response = await axios.post(`${API_URL}/auth/google`, googleData);
+            console.log("[API GoogleLogin] Response:", response);
+
+            if (response.data && response.data.token) {
+                localStorage.setItem('token', response.data.token);
+                console.log("[API GoogleLogin] Token stored successfully.");
+            } else {
+                console.warn("[API GoogleLogin] Login response received, but no token found:", response.data);
+            }
+            return response.data;
+        } catch (error) {
+            console.error("[API GoogleLogin] Error:", error);
+            if (error.response) {
+                console.error("[API GoogleLogin] Error response data:", error.response.data);
+                console.error("[API GoogleLogin] Error response status:", error.response.status);
+                throw {
+                    message: error.response.data?.message || "Google login failed",
+                    status: error.response.status,
+                    data: error.response.data
+                };
+            } else if (error.request) {
+                console.error("[API GoogleLogin] No response received:", error.request);
+                throw new Error("No response from server during Google login.");
+            } else {
+                throw new Error(error.message || "An unexpected error occurred during Google login.");
             }
         }
     },
